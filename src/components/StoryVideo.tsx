@@ -15,7 +15,7 @@ import { metrics, headlineMetrics, METRICS_AS_OF } from '@/content/metrics';
 import { clips, sceneMedia, type Clip } from '@/content/storyVideo';
 import { Channels } from './Journey';
 import { Phone } from './PhoneScreens';
-import { ServiceFlywheel } from './ServiceFlywheel';
+import { ServiceWheel } from './ServiceWheel';
 
 const N = beats.length;
 const BEAT_VH = 40;
@@ -84,6 +84,7 @@ export function StoryVideo() {
 
         {/* light from the left and the top: the story and the navigation sit on it */}
         <div aria-hidden className="pointer-events-none absolute inset-0 z-[6] hidden bg-[linear-gradient(90deg,rgba(255,253,245,0.97)_0%,rgba(255,253,245,0.95)_40%,rgba(255,253,245,0.88)_52%,rgba(255,253,245,0.7)_62%,rgba(255,253,245,0.4)_70%,rgba(255,253,245,0.12)_78%,rgba(255,253,245,0)_86%)] lg:block" />
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-[6] hidden bg-[linear-gradient(90deg,rgba(255,253,245,0)_55%,rgba(255,253,245,0.55)_66%,rgba(255,253,245,0.25)_76%,rgba(255,253,245,0)_86%)] lg:block" style={{ opacity: 'calc(1 - var(--t) * 2.5)' }} />
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[6] h-[20%] bg-gradient-to-b from-[rgba(255,253,245,0.9)] via-[rgba(255,253,245,0.45)] to-transparent" />
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[6] h-[64%] bg-gradient-to-t from-[rgba(2,30,36,0.94)] via-[rgba(2,30,36,0.55)] to-transparent lg:hidden" />
 
@@ -127,11 +128,13 @@ export function StoryVideo() {
         <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-7 text-white lg:hidden">
           {!isOutro && (
             <div className={`absolute inset-x-0 bottom-0 px-4 pb-7 ${beat === 0 ? '' : 'pointer-events-none'}`} style={{ opacity: 'calc(1 - var(--t) * 2)' }}>
-              <div className="mx-auto w-[min(78vw,330px)]" style={{ transform: 'translateX(calc(var(--t) * 30vw)) scale(calc(1 + var(--t) * 0.6))' }}>
-                <ServiceFlywheel onPick={goTo} compact dark>
-                  <span className="text-[0.7rem] font-bold leading-tight text-white">The farmer</span>
-                  <span className="text-[0.52rem] font-semibold leading-tight text-lime">at the centre</span>
-                </ServiceFlywheel>
+              <div className="mx-auto w-[min(88vw,380px)]" style={{ transform: 'translateX(calc(var(--t) * 30vw)) scale(calc(1 + var(--t) * 0.6))' }}>
+                <ServiceWheel onPick={goTo} compact dark>
+                  <div className="flex aspect-square w-full flex-col items-center justify-center rounded-full bg-[rgba(2,30,36,0.55)] px-4">
+                    <span className="text-[1.05rem] font-bold leading-tight text-white">The farmer</span>
+                    <span className="mt-1 max-w-[8rem] text-[0.66rem] font-bold leading-snug text-lime">Every service, from financing to payout</span>
+                  </div>
+                </ServiceWheel>
               </div>
               <h1 className="mt-5 text-[1.7rem] font-bold leading-[1.08] tracking-tight text-white">{intro.title}</h1>
               <p className="mt-2 text-[0.92rem] leading-snug text-white/85">{about}</p>
@@ -195,23 +198,23 @@ const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
 function IntroStage({ onPick }: { onPick: (scene: string) => void }) {
   return (
-    <div className="relative flex h-[min(calc(100svh-var(--header-h)-40px),680px)] items-center gap-[clamp(2rem,3.5vw,3.5rem)]">
+    <div className="relative -ml-[clamp(0rem,1.5vw,2rem)] flex h-[min(calc(100svh-var(--header-h)-24px),720px)] items-center gap-[clamp(1.5rem,2.8vw,3rem)]">
       <div
-        className="w-[min(calc((100svh-var(--header-h))*0.76),32vw)] shrink-0"
+        className="w-[min(calc((100svh-var(--header-h))*0.86),40vw,640px)] shrink-0"
         style={{ transform: 'translateX(calc(var(--t) * 36vw)) scale(calc(1 + var(--t) * 0.9))', opacity: 'calc(1 - var(--t) * 1.7)' }}
       >
         <div className="lower-third">
-          <ServiceFlywheel onPick={onPick}>
-            <span className="text-[clamp(0.9rem,1.15vw,1.1rem)] font-bold leading-tight text-ink">The farmer</span>
-            <span className="mt-0.5 max-w-[9rem] text-[clamp(0.64rem,0.78vw,0.76rem)] font-semibold leading-tight text-field">at the centre of every service</span>
-          </ServiceFlywheel>
+          <ServiceWheel onPick={onPick}>
+            <span className="text-[clamp(1.1rem,1.6vw,1.6rem)] font-bold leading-tight tracking-tight text-ink">The farmer</span>
+            <span className="mt-1.5 max-w-[12rem] text-[clamp(0.74rem,0.95vw,0.92rem)] font-bold leading-snug text-field">Every service, from financing to payout</span>
+          </ServiceWheel>
         </div>
       </div>
-      <div className="w-[min(380px,27vw)]" style={{ opacity: 'calc(1 - var(--t) * 2.4)', transform: 'translateX(calc(var(--t) * -3vw))' }}>
+      <div className="w-[min(360px,25vw)]" style={{ opacity: 'calc(1 - var(--t) * 2.4)', transform: 'translateX(calc(var(--t) * -3vw))' }}>
         <div className="lower-third">
           <p className="text-[0.95rem] font-bold text-field">What iFarmer does</p>
-          <h1 className="mt-1 text-[clamp(1.9rem,2.9vw,2.9rem)] font-bold leading-[1.04] tracking-[-0.03em] text-ink">{intro.title}</h1>
-          <p className="mt-4 text-[1rem] leading-relaxed text-ink-soft">{about}</p>
+          <h1 className="mt-1 text-[clamp(1.8rem,2.7vw,2.7rem)] font-bold leading-[1.04] tracking-[-0.03em] text-ink">{intro.title}</h1>
+          <p className="mt-4 text-[0.98rem] leading-relaxed text-ink-soft">{about}</p>
           <dl className="mt-5 grid grid-cols-3 gap-4">
             {(['registeredFarmers', 'financeFacilitated', 'produceSold'] as const).map((id) => (
               <div key={id}>
