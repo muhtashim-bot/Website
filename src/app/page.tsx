@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Story3D } from '@/components/Story3D';
+import { StoryVideo } from '@/components/StoryVideo';
+import { clips } from '@/content/storyVideo';
 import { StatementBand } from '@/components/HeroFilm';
 import { ServiceTabs } from '@/components/ServiceTabs';
 import { CTABand, Initials, MetricRow, Section, SectionHead, StatusTag } from '@/components/ui';
@@ -29,7 +30,7 @@ function fmt(d: string) {
 export default function Home() {
   return (
     <>
-      <Story3D />
+      <StoryVideo />
 
       {/* metrics */}
       <section aria-label="iFarmer in numbers" className="border-b border-ink/[0.06] bg-white">
@@ -248,6 +249,18 @@ export default function Home() {
         primary={{ label: 'Partner with us', href: '/for-partners/' }}
         secondary={{ label: 'Get the apps', href: '/apps/' }}
       />
+
+      <p id="footage" className="container pb-8 pt-2 text-xs leading-relaxed text-ink-mute">
+        Story footage from Pexels, free to use:{' '}
+        {Object.values(clips).map((c, i, all) => (
+          <span key={c.key}>
+            <a href={c.page} className="underline decoration-ink/20 underline-offset-2 hover:text-field" rel="noopener">
+              {c.credit}
+            </a>
+            {i < all.length - 1 ? '; ' : '.'}
+          </span>
+        ))}
+      </p>
     </>
   );
 }

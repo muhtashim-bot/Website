@@ -111,12 +111,10 @@ Nothing on the site is invented, but several items are carried over as published
 - [ ] Bangla version: copy is centralised in `src/content`, so a `bn` copy of those files plus a locale switch is the main work.
 - [ ] Move `src/content` into a headless CMS (Sanity, Payload or Strapi) when the content team is ready.
 
-### Performance notes (3D story)
+### Homepage story footage
 
-- No post-processing: the renderer uses MSAA and ACES tone mapping; the vignette is a CSS overlay.
-- The river is a reflective material, not a mirror (a mirror re-renders the scene every frame).
-- The sky environment map is rendered once at load; re-rendering it while scrolling caused hitches.
-- Rice, distant trees and small objects in wide shots cast no shadows; people are merged into a few meshes each; sacks are instanced.
-- Resolution drops a step automatically if frames run slower than about 48 fps (see `adapt()` in `src/three/delta.ts`).
-- Avoid `backdrop-filter` on anything over the canvas: it makes the browser re-read the WebGL canvas every frame.
-- `?debug` exposes the world as `window.__world` (draw calls: `__world.renderer.info.render`).
+- The homepage story (`src/components/StoryVideo.tsx`) plays real footage behind each step; clips and credits are in `src/content/storyVideo.ts`.
+- Current clips are free Pexels footage from Bangladesh, streamed from Pexels. Each clip lists smaller renditions first (720p desktop, 540p/360p phones) and the known 1080p original last; the browser plays the first one that exists.
+- Only the clip on screen plays; its neighbours load metadata only. Posters show until a clip can play.
+- The iFarmer Center step uses our own photo of a center.
+- **Before launch:** replace stock clips with iFarmer's own footage. Compress to about 1 to 2 MB per 8-second clip (`ffmpeg -i in.mp4 -t 8 -vf scale=1280:-2 -an -c:v libx264 -crf 26 -preset slow -movflags +faststart out.mp4`), put it in `public/video/`, and list it first in the clip's sources.
