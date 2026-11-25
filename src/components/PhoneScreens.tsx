@@ -126,6 +126,24 @@ const screens: Record<string, () => ReactNode> = {
       </Body>
     </>
   ),
+  'folon-approved': () => (
+    <>
+      <Bar app="Folon" title="Your crop finance" />
+      <Body>
+        <div className="mx-auto mt-1 flex h-14 w-14 items-center justify-center rounded-full" style={{ background: LIME }}>
+          <svg width="26" height="26" viewBox="0 0 30 30" aria-hidden>
+            <path d="m7 15.5 5.5 5.5L23 10" stroke={G} strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <p className="text-center text-[15px] font-bold">Approved</p>
+        <div className="rounded-2xl bg-white p-3.5 ring-1 ring-black/[0.06]">
+          <Steps items={['Application received', 'Farm verified', 'Approved by the lender', 'Funds sent to you']} at={3} />
+        </div>
+        <Field label="Repayment" value="At harvest" />
+        <Btn>Buy inputs at KriShop</Btn>
+      </Body>
+    </>
+  ),
   'iharvst-fund': () => (
     <>
       <Bar app="iHarvst" title="All Farms" />
@@ -428,7 +446,7 @@ export function Phone({ screen, className = '' }: { screen: string; className?: 
   }, []);
   return (
     <div ref={box} className={`relative aspect-[300/632] ${className}`}>
-      <div className="absolute left-0 top-0 origin-top-left" style={{ width: 300, height: 632, transform: `scale(${k})` }}>
+      <div style={{ width: 300, height: 632, zoom: k }}>
         <div className="relative h-full w-full rounded-[2.9rem] bg-[#0E1512] p-[10px] shadow-[0_40px_80px_-30px_rgba(2,43,54,0.55),inset_0_0_0_1.5px_rgba(255,255,255,0.08)]">
           <div className="relative flex h-full flex-col overflow-hidden rounded-[2.35rem] bg-[#F5F7F1] font-sans text-[#1B2A1F]">
             <div className="absolute left-1/2 top-2 z-20 h-[20px] w-[82px] -translate-x-1/2 rounded-full bg-[#0E1512]" aria-hidden />

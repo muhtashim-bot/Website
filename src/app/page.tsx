@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { Journey } from '@/components/Journey';
-import { HeroFilm, StatementBand } from '@/components/HeroFilm';
+import { Story3D } from '@/components/Story3D';
+import { StatementBand } from '@/components/HeroFilm';
 import { ServiceTabs } from '@/components/ServiceTabs';
 import { CTABand, Initials, MetricRow, Section, SectionHead, StatusTag } from '@/components/ui';
 import { audiences, products, services } from '@/content/offerings';
@@ -29,8 +29,7 @@ function fmt(d: string) {
 export default function Home() {
   return (
     <>
-      <HeroFilm />
-      <Journey />
+      <Story3D />
 
       {/* metrics */}
       <section aria-label="iFarmer in numbers" className="border-b border-ink/[0.06] bg-white">

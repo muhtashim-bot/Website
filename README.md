@@ -1,6 +1,6 @@
 # iFarmer website: revamp prototype
 
-A full rebuild of ifarmer.asia: a homepage that opens on a looping film of real field photography, then tells the season service by service. The app journey (every service, the apps that deliver it, and a phone whose screen changes) sits on the left; a scroll-driven cinematic of real Bangladeshi farm photos zooms and slides on the right. 35 pages on shared templates. It keeps the current brand (leaf green `#88BB41`, deep green `#038F2F`, lime `#DDFF80`, cream `#FFF5D9`, Quicksand) and folds in the AI & Data Website Update Guide (Nov 2026).
+A full rebuild of ifarmer.asia. The homepage is a realistic 3D fly-through of a Bangladeshi delta that follows one farming season: a farmer applies for finance, funders back the loan, inputs arrive, the crop grows and ripens, the harvest is sold, and everyone is paid. The app journey (every service, the apps that deliver it, and a phone whose screen changes) sits on the left. 35 pages on shared templates. It keeps the current brand (leaf green `#88BB41`, deep green `#038F2F`, lime `#DDFF80`, cream `#FFF5D9`, Quicksand) and folds in the AI & Data Website Update Guide (Nov 2026).
 
 ## Run it locally
 
@@ -22,8 +22,9 @@ npm start            # serves ./out on http://localhost:3000
 
 Useful URLs:
 
-- `/` homepage: hero film, then the app journey and cinematic
-- `/?static` the journey as a still, readable sequence (also what visitors with reduced motion get)
+- `/` homepage with the 3D story
+- `/?low` the lighter 3D version phones get (no reflections or post-processing)
+- `/?static` the story as a still, readable sequence (also what visitors with reduced motion or no WebGL 2 get)
 - `/ai-data-intelligence/` the new AI & Data page from the brief
 
 ## How it is built
@@ -32,14 +33,15 @@ Useful URLs:
 | --- | --- |
 | Framework | Next.js 15 (App Router), TypeScript, `output: 'export'` |
 | Styling | Tailwind CSS 3 with iFarmer tokens in `tailwind.config.ts` |
-| Motion | Scroll-driven photo cinematic in `src/components/Journey.tsx` (CSS transforms, no libraries) |
+| 3D | Three.js with a physical sky, reflective river and wind-animated crops (`src/three/delta.ts`); post-processing with ambient occlusion, depth of field and bloom (`postprocessing`, `n8ao`) |
 | Film | `scripts/render_film.py` (Pillow + ffmpeg) renders the hero loop and the services film from the photos |
 | Fonts | Quicksand, self-hosted through `@fontsource/quicksand` |
 
 ```
 src/
   app/                    one folder per page; [slug] renders every service, solution and audience page
-  components/             Header, Footer, HeroFilm, Journey (app journey + cinematic), PhoneScreens, OfferingPage template, ui.tsx
+  components/             Header, Footer, Story3D (homepage 3D story), PhoneScreens, Journey (static fallback + app chips), OfferingPage, ui.tsx
+  three/delta.ts          the 3D delta: terrain, river, sky, fields, villages, people, vehicles, camera keys
   content/                ALL copy and numbers live here
     metrics.ts            single source of truth for every number (AI brief, section 10)
     journey.ts            the 9 chapters of the homepage story
@@ -48,25 +50,34 @@ src/
     ai.ts                 AI & Data page copy and statuses (from the brief)
     nav.ts                menu structure
 public/photos/            real field photos (1920px and 1080px)
-public/video/             hero film and poster
+public/scenes/            still shown while the 3D loads
 scripts/render_film.py    renders the hero loop and the services film
 ```
 
 ### The homepage story
 
-1. **Hero film** (`src/components/HeroFilm.tsx`): `public/video/hero-1280.mp4`, a 22-second seamless loop of seven real photos with zoom, pan, slide and push-through transitions. Muted, with a pause button; a poster frame shows for reduced motion.
-2. **The app journey** (`src/components/Journey.tsx`, content in `src/content/journey.ts`):
-   - **Left:** every service on one thread, each with the apps, places and partners that deliver it (Folon, Folon-AI, Sofol, KriShop, iHarvst, Supplier Connect, iFarmer Center, Experience Centers, Farmer Card, partner banks and NBFIs). A phone beside it changes screen with every shot (`src/components/PhoneScreens.tsx`).
-   - **Right:** a cinematic of 15 real photos. Each shot has its own camera move (`from` → `to`: scale and pan) and arrives by zoom, slide or rise, all driven by scroll. The service title and story sit over the film like a lower third.
-   - On phones the film fills the screen, the story sits at the bottom and the phone floats top right.
-3. **Statement band** with a slowly drifting photo, then the rest of the homepage.
+`src/components/Story3D.tsx` pins a full-screen 3D world (`src/three/delta.ts`) while the visitor scrolls through 15 beats (`src/content/story3d.ts`). The camera flies from place to place along a spline, and the sun moves from dawn to golden hour.
 
-To change a scene, edit `src/content/journey.ts`: its words, its apps (`channels`), and for each shot the photo, camera move, transition, phone `screen` and the line under the phone (`app`, `does`).
+| Beat | Where | What moves | Phone shows |
+| --- | --- | --- | --- |
+| intro | Aerial over the delta at dawn | Boats, birds, smoke from the homestead | The iFarmer apps |
+| apply | The farmer's homestead | Phone glows, data rings rise | Folon: apply for crop finance |
+| fund | Market town and partner bank | A light trail from the iHarvst billboard to the bank | iHarvst: fund a farm |
+| receive | Over the village | The money trail lands at the farmer | Folon: approved |
+| buy / card | Village bazaar, KriShop shop | The KriShop van arrives, the shop restocks | KriShop order, Farmer Card |
+| grow / grow2 | Paddy fields | Rice grows in the wind, a soil sensor pulses, a drone and a satellite pass | Folon-AI, Folon advice |
+| harvest / collect / dispatch | Fields, collection point, highway | Crop turns gold, workers harvest, sacks fill the shed, trucks leave | Supplier Connect |
+| center | iFarmer Center at the river ghat | Farmers at the veranda | Sofol: register a farmer |
+| paid / returns / outro | Homestead, town, aerial at sunset | Trails return to the farmer and the funders | Folon paid, iHarvst returns |
+
+- Words for each service: `src/content/journey.ts`. Words for each beat (phone screen, app line, pinned label): `src/content/story3d.ts`.
+- Camera framing, sun angle and depth of field per beat: `KEYS` near the top of `src/three/delta.ts`.
+- Phones and slower computers get the light version automatically; `/?low` forces it.
 
 ### Photos and films
 
 - Photos in `public/photos/` are iFarmer's own field photography, taken from the current ifarmer.asia pages, in 1920px and 1080px versions. To swap one, replace both files with the same name. Use only photos you hold rights and consent for.
-- Re-render the films after changing photos: `pip install pillow numpy && python3 scripts/render_film.py hero` (homepage loop) and `python3 scripts/render_film.py services out.mp4` (1080p services film with titles). Needs ffmpeg.
+- `scripts/render_film.py services out.mp4` renders the 1080p services film with titles from these photos (`pip install pillow numpy`, needs ffmpeg). The site itself does not use the video.
 - **Phone screens are illustrative layouts**, not product screenshots. To use real screenshots, save them as `public/apps/<screen>.png` (for example `folon-apply.png`) and list them in `realShots` at the top of `src/components/PhoneScreens.tsx`.
 
 ## Before launch
