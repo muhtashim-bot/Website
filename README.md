@@ -118,3 +118,8 @@ Nothing on the site is invented, but several items are carried over as published
 - Only the clip on screen plays; its neighbours load metadata only. Posters show until a clip can play.
 - The iFarmer Center step uses our own photo of a center.
 - **Before launch:** replace stock clips with iFarmer's own footage. Compress to about 1 to 2 MB per 8-second clip (`ffmpeg -i in.mp4 -t 8 -vf scale=1280:-2 -an -c:v libx264 -crf 26 -preset slow -movflags +faststart out.mp4`), put it in `public/video/`, and list it first in the clip's sources.
+
+### AI & Data page
+
+- **AI & Data hero chat** (`src/components/AIChatDemo.tsx`): an illustrative conversation, captioned as such. The AI guide says no demo appears until approved: confirm the two conversations (brown spot advice, potato sale) with the agronomy and data teams before launch.
+- **Voice AI walkthrough**: the five outcomes now scroll with a phone (`voiceWalk` in `src/content/ai.ts`, screens `voice-*` in `PhoneScreens.tsx`). Screens are illustrative.

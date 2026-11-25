@@ -25,6 +25,7 @@ const apps: Record<string, AppStyle> = {
   iHarvst: { name: 'iHarvst', bg: '#5E852B', fg: '#fff', mark: 'iH' },
   'Supplier Connect': { name: 'Supplier Connect', bg: '#124A55', fg: '#fff', mark: 'SC' },
   'Farmer Card': { name: 'Farmer Card', bg: G, fg: '#fff', mark: 'FC' },
+  'Voice AI': { name: 'Bangla Voice AI', bg: TEAL, fg: LIME, mark: 'VA' },
 };
 
 function Bar({ app, title }: { app: string; title: string }) {
@@ -86,7 +87,101 @@ const Thumb = ({ photo, h = 92, pos = '50% 50%' }: { photo: string; h?: number; 
   <img src={`/photos/${photo}-1080.jpg`} alt="" className="w-full rounded-xl object-cover" style={{ height: h, objectPosition: pos }} loading="lazy" />
 );
 
+/** A Bangla Voice AI call: what the farmer said, then what it became. */
+const Call = ({ title, bn, en, children }: { title: string; bn: string; en: string; children: ReactNode }) => (
+  <>
+    <Bar app="Voice AI" title={title} />
+    <Body>
+      <div className="rounded-2xl p-3" style={{ background: '#0B3A45', color: '#fff' }}>
+        <div className="flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: LIME }} />
+          <span className="text-[9.5px] font-bold" style={{ color: LIME }}>
+            Call in progress
+          </span>
+          <span className="ml-auto flex h-3 items-center gap-[2px]" aria-hidden>
+            {[5, 9, 6, 11, 7, 10, 5].map((h, i) => (
+              <span key={i} className="w-[2px] rounded-full" style={{ height: h, background: LIME, opacity: 0.8 }} />
+            ))}
+          </span>
+        </div>
+        <p lang="bn" className="mt-2 text-[13px] font-semibold leading-snug">
+          {bn}
+        </p>
+        <p className="mt-1 text-[9.5px] leading-snug opacity-70">{en}</p>
+      </div>
+      {children}
+    </Body>
+  </>
+);
+
 const screens: Record<string, () => ReactNode> = {
+  'voice-profile': () => (
+    <Call title="Building the farmer profile" bn="আমার দুই বিঘা জমিতে বোরো ধান আছে, পরিবারে পাঁচজন।" en="I grow Boro rice on two bigha. There are five of us at home.">
+      <p className="text-[10px] font-bold text-[#6B786E]">Saved to the farmer profile</p>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Household" value="5 people" />
+        <Field label="Land" value="2 bigha" />
+        <Field label="Crop" value="Boro rice" />
+        <Field label="Phone" value="Verified" />
+      </div>
+      <Btn tone="lime">Profile updated</Btn>
+    </Call>
+  ),
+  'voice-credit': () => (
+    <Call title="Adding to the credit assessment" bn="গত বছরের লোন সময়মতো শোধ করেছি।" en="I repaid last year’s loan on time.">
+      <div className="rounded-2xl bg-white p-3.5 ring-1 ring-black/[0.06]">
+        <Steps items={['KYC and identity', 'Repayment history', 'What the farmer shared', 'Field verification']} at={2} />
+      </div>
+      <p className="text-[10px] font-semibold text-[#6B786E]">The credit team or lending partner makes the decision.</p>
+      <Btn tone="dark">Send to credit team</Btn>
+    </Call>
+  ),
+  'voice-advice': () => (
+    <Call title="Answering in Bangla" bn="ধানের পাতায় বাদামি দাগ, কী করব?" en="Brown spots on my rice leaves. What should I do?">
+      <div className="rounded-2xl rounded-bl-md p-3" style={{ background: LIME, color: TEAL }}>
+        <p lang="bn" className="text-[12px] font-semibold leading-snug">
+          সম্ভবত বাদামি দাগ রোগ। সঠিক মাত্রায় পটাশ সার দিন।
+        </p>
+        <p className="mt-1 text-[9.5px] leading-snug opacity-75">Likely brown spot. Apply potash at the right rate.</p>
+      </div>
+      <div className="flex items-center gap-2 rounded-xl bg-white p-2.5 text-[11.5px] font-bold ring-1 ring-black/[0.06]">
+        <Check /> Agronomist follow-up booked
+      </div>
+      <Btn>Send photo to agronomist</Btn>
+    </Call>
+  ),
+  'voice-inputs': () => (
+    <Call title="Recommending inputs" bn="এই সময় কোন সার দেব, কোথায় পাব?" en="Which fertilizer now, and where can I get it?">
+      <div className="rounded-2xl bg-white p-3 ring-1 ring-black/[0.06]">
+        <p className="text-[9.5px] font-bold text-[#6B786E]">For your crop stage</p>
+        <p className="mt-1 text-[13px] font-bold text-[#1B2A1F]">Fertilizer for tillering rice</p>
+        <div className="mt-2 space-y-1.5">
+          <Skel w="85%" />
+          <Skel w="60%" />
+        </div>
+      </div>
+      <div className="flex items-center gap-2 rounded-xl bg-white p-2.5 text-[11.5px] font-bold ring-1 ring-black/[0.06]">
+        <Check /> Available through KriShop partner shops
+      </div>
+      <div className="flex items-center gap-2 rounded-xl bg-white p-2.5 text-[11.5px] font-bold ring-1 ring-black/[0.06]">
+        <Check /> Order follow-up in two days
+      </div>
+      <Btn>Send to KriShop</Btn>
+    </Call>
+  ),
+  'voice-procure': () => (
+    <Call title="Planning procurement" bn="এবার চল্লিশ মণ আলু বিক্রি করতে চাই।" en="This season I want to sell forty maunds of potatoes.">
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Crop" value="Potato" />
+        <Field label="Expected volume" value="40 maunds" />
+        <Field label="Ready" value="In three weeks" />
+        <Field label="Plans to" value="Sell" />
+      </div>
+      <Field label="Collection" value="Nearest iFarmer Center" />
+      <Btn tone="lime">Added to procurement plan</Btn>
+    </Call>
+  ),
+
   launcher: () => (
     <div className="absolute inset-0 flex flex-col">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -617,6 +712,7 @@ function screenApp(screen: string) {
   if (screen.startsWith('krishop')) return 'KriShop';
   if (screen.startsWith('iharvst')) return 'iHarvst';
   if (screen.startsWith('supplier')) return 'Supplier Connect';
+  if (screen.startsWith('voice')) return 'Voice AI';
   return 'Farmer Card';
 }
 

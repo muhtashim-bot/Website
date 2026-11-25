@@ -9,7 +9,7 @@ export type FAQ = { q: string; a: string };
 export type Module = { title: string; body: string; href: string; linkLabel: string };
 export type Block = { title: string; intro?: string; items: Item[]; layout?: 'grid' | 'list' | 'steps' };
 /** A step of the scrolling phone walkthrough on solution pages. `screen` is a PhoneScreens key. */
-export type WalkStep = { title: string; body: string; screen: string; callouts?: string[] };
+export type WalkStep = { title: string; body: string; screen: string; callouts?: string[]; details?: string[] };
 export type Walkthrough = { title: string; steps: WalkStep[] };
 
 export type Page = {

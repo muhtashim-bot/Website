@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { aiFlow, aiFlowIntro, aiHero, capabilities, folonAI, profileInputs, responsibleAI, voiceAI, workWithUs } from '@/content/ai';
-import { FolonModes, VoiceOutcomes } from '@/components/AIInteractive';
+import { aiFlow, aiFlowIntro, aiHero, capabilities, folonAI, profileInputs, responsibleAI, voiceAI, voiceWalk, workWithUs } from '@/content/ai';
+import { FolonModes } from '@/components/AIInteractive';
+import { AIChatDemo } from '@/components/AIChatDemo';
+import { Walkthrough } from '@/components/Walkthrough';
 import { Section, SectionHead, SmartLink, StatusTag } from '@/components/ui';
 
 export const metadata: Metadata = {
@@ -27,14 +29,17 @@ export default function AIPage() {
         <div aria-hidden className="absolute -right-40 -top-40 h-[640px] w-[640px] rounded-full border border-lime/20" />
         <div aria-hidden className="absolute -right-20 -top-20 h-[440px] w-[440px] rounded-full border border-lime/25" />
         <div aria-hidden className="absolute right-10 top-10 h-[240px] w-[240px] rounded-full bg-lime/10" />
-        <div className="container relative py-20 md:py-28">
-          <p className="text-sm font-semibold text-lime">AI & Data Intelligence</p>
-          <h1 className="mt-3 max-w-4xl text-h1 text-white">{aiHero.title}</h1>
-          <p className="mt-6 max-w-3xl text-lead text-white/80 md:text-[1.3rem]">{aiHero.body}</p>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <a href="#voice-ai" className="btn-lime">See our AI in action</a>
-            <Link href="/contact/?topic=partner" className="btn-on-dark">Partner with us</Link>
+        <div className="container relative grid items-center gap-12 py-16 md:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
+          <div>
+            <p className="text-sm font-semibold text-lime">AI & Data Intelligence</p>
+            <h1 className="mt-3 text-h1 text-white">{aiHero.title}</h1>
+            <p className="mt-6 text-lead text-white/80">{aiHero.body}</p>
+            <div className="mt-9 flex flex-wrap gap-3">
+              <a href="#voice-ai" className="btn-lime">See our AI in action</a>
+              <Link href="/contact/?topic=partner" className="btn-on-dark">Partner with us</Link>
+            </div>
           </div>
+          <AIChatDemo />
         </div>
       </section>
 
@@ -70,14 +75,7 @@ export default function AIPage() {
         </ol>
       </Section>
 
-      <Section id="voice-ai" tone="cream">
-        <div className="mb-10 flex flex-wrap items-center gap-3">
-          <StatusTag status="LIVE" />
-          <span className="text-sm font-semibold text-ink-mute">Flagship</span>
-        </div>
-        <SectionHead title={voiceAI.title} intro={voiceAI.body} />
-        <VoiceOutcomes />
-      </Section>
+      <Walkthrough id="voice-ai" name="Bangla Voice AI" kicker="Bangla Voice AI, live in daily operations" intro={voiceAI.body} data={voiceWalk} belowNav />
 
       <Section id="folon-ai">
         <div className="grid gap-12 lg:grid-cols-[1fr_1fr]">

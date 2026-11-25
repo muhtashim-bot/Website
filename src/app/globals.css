@@ -90,6 +90,19 @@
   to { opacity: 1; transform: none; }
 }
 .wt-callout { animation: calloutIn 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes aiIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.ai-in { animation: aiIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes aiWave {
+  0%, 100% { transform: scaleY(0.45); }
+  50% { transform: scaleY(1); }
+}
+.ai-wave { animation: aiWave 0.7s ease-in-out infinite; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) {
+  .ai-in, .ai-wave { animation: none; }
+}
 .hero-rise { animation: lowerThird 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 
 @keyframes kenburns {

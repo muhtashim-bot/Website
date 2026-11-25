@@ -11,7 +11,9 @@ import { Phone } from './PhoneScreens';
 
 const STEP_VH = 52;
 
-export function Walkthrough({ name, data }: { name: string; data: W }) {
+export function Walkthrough({ name, data, kicker, intro, id, tone = 'cream', belowNav = false }: { name: string; data: W; kicker?: string; intro?: string; id?: string; tone?: 'cream' | 'mint'; belowNav?: boolean }) {
+  const label = kicker ?? `How it works in ${name}`;
+  const bg = tone === 'mint' ? 'bg-mint' : 'bg-[#FFFDF5]';
   const ref = useRef<HTMLElement>(null);
   const [k, setK] = useState(0);
   const [mode, setMode] = useState<'scroll' | 'static'>('scroll');
@@ -48,9 +50,9 @@ export function Walkthrough({ name, data }: { name: string; data: W }) {
 
   if (mode === 'static') {
     return (
-      <section aria-labelledby="walk-title" className="bg-[#FFFDF5]">
+      <section id={id} aria-labelledby="walk-title" className={bg}>
         <div className="container py-16">
-          <p className="text-[0.95rem] font-bold text-field">How it works in {name}</p>
+          <p className="text-[0.95rem] font-bold text-field">{label}</p>
           <h2 id="walk-title" className="mt-1 max-w-2xl text-h2">{data.title}</h2>
           <ol className="mt-10 grid gap-10 md:grid-cols-2 lg:grid-cols-3">
             {data.steps.map((s) => (
@@ -72,18 +74,25 @@ export function Walkthrough({ name, data }: { name: string; data: W }) {
 
   const step = data.steps[k];
   return (
-    <section ref={ref} aria-labelledby="walk-title" className="relative bg-[#FFFDF5]" style={{ height: `calc(${n * STEP_VH}svh + 45svh)` }}>
-      <div className="sticky top-[var(--header-h)] h-[calc(100svh-var(--header-h))] overflow-hidden">
+    <section
+      ref={ref}
+      id={id}
+      aria-labelledby="walk-title"
+      className={`relative ${bg} [--walk-top:var(--header-h)] ${belowNav ? 'md:[--walk-top:calc(var(--header-h)+54px)]' : ''}`}
+      style={{ height: `calc(${n * STEP_VH}svh + 45svh)` }}
+    >
+      <div className="sticky top-[var(--walk-top)] h-[calc(100svh-var(--walk-top))] overflow-hidden">
         <div aria-hidden className="furrows pointer-events-none absolute inset-0 opacity-40 [mask-image:radial-gradient(60%_70%_at_70%_50%,black,transparent)]" />
         <div className="container relative grid h-full grid-rows-[auto_1fr] gap-4 py-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:grid-rows-1 lg:items-center lg:gap-12 lg:py-10">
           {/* the steps */}
           <div className="order-2 min-h-0 lg:order-1">
-            <p className="hidden text-[0.95rem] font-bold text-field lg:block">How it works in {name}</p>
+            <p className="hidden text-[0.95rem] font-bold text-field lg:block">{label}</p>
             <h2 id="walk-title" className="mt-1 hidden max-w-xl text-[clamp(1.8rem,2.8vw,2.6rem)] font-bold leading-[1.08] tracking-tight lg:block">
               {data.title}
             </h2>
+            {intro && <p className="mt-3 hidden max-w-xl text-[1rem] leading-relaxed text-ink-soft [@media(min-height:820px)]:lg:block">{intro}</p>}
             <p className="text-sm font-bold text-ink-mute lg:mt-6" aria-live="polite">
-              <span className="lg:hidden">How it works in {name}, step {k + 1} of {n}</span>
+              <span className="lg:hidden">{label}, step {k + 1} of {n}</span>
               <span className="hidden lg:inline">Step {k + 1} of {n}</span>
             </p>
             <ol className="relative mt-3 lg:mt-4">
@@ -109,9 +118,19 @@ export function Walkthrough({ name, data }: { name: string; data: W }) {
                       <h3 className={`font-bold leading-snug tracking-tight transition-colors ${on ? 'text-[1.35rem] text-ink lg:text-[1.55rem]' : 'text-[1.05rem] text-ink-soft hover:text-field'}`}>{s.title}</h3>
                     </button>
                     <div className={`wt-body grid transition-[grid-template-rows] duration-300 ease-out ${on ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-                      <p className="overflow-hidden pb-1 text-[1.02rem] leading-relaxed text-ink-soft lg:max-w-[30rem]">
-                        <span className="block pt-2">{s.body}</span>
-                      </p>
+                      <div className="overflow-hidden pb-1 text-[1.02rem] leading-relaxed text-ink-soft lg:max-w-[30rem]">
+                        <p className="pt-2">{s.body}</p>
+                        {s.details && (
+                          <ul className="mt-2 space-y-1 text-[0.95rem]">
+                            {s.details.map((d) => (
+                              <li key={d} className="flex gap-2">
+                                <span className="mt-[0.55em] h-1.5 w-1.5 shrink-0 rounded-full bg-leaf" aria-hidden />
+                                <span>{d}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     </div>
                     <div className="h-4 lg:h-6" />
                   </li>
@@ -122,7 +141,7 @@ export function Walkthrough({ name, data }: { name: string; data: W }) {
 
           {/* the phone, with callouts */}
           <div className="relative order-1 flex min-h-0 items-center justify-center lg:order-2">
-            <div className="relative h-[48svh] lg:h-[min(620px,calc(100svh-var(--header-h)-80px))]">
+            <div className="relative h-[48svh] lg:h-[min(620px,calc(100svh-var(--walk-top)-80px))]">
               <div className="relative mx-auto h-full aspect-[300/632]">
                 <Phone screen={step.screen} className="h-full !w-auto" />
                 {(step.callouts ?? []).map((c, j) => (

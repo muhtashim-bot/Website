@@ -15,18 +15,20 @@ import { metrics, headlineMetrics, METRICS_AS_OF } from '@/content/metrics';
 import { clips, sceneMedia, type Clip } from '@/content/storyVideo';
 import { Channels } from './Journey';
 import { Phone } from './PhoneScreens';
-import { ServiceOrbit } from './ServiceOrbit';
+import { ServiceFlywheel } from './ServiceFlywheel';
 
 const N = beats.length;
 const BEAT_VH = 40;
 const services = scenes.filter((s) => s.id !== 'intro');
 const sceneById = (id: string) => scenes.find((s) => s.id === id);
 const ORDER = ['intro', ...services.map((s) => s.id), 'outro'];
+const about = `iFarmer is an agritech company in Bangladesh. We finance smallholder farmers, bring them quality inputs and advice, and connect their harvest to buyers, through our apps and ${metrics.centers.value} iFarmer Centers in ${metrics.districts.value} districts.`;
 
 export function StoryVideo() {
   preconnect('https://videos.pexels.com');
   preconnect('https://images.pexels.com');
   const sectionRef = useRef<HTMLElement>(null);
+  const stickyRef = useRef<HTMLDivElement>(null);
   const [beat, setBeat] = useState(0);
   const [mobile, setMobile] = useState(false);
   const [reduced, setReduced] = useState(false);
@@ -41,7 +43,10 @@ export function StoryVideo() {
       const r = section.getBoundingClientRect();
       const total = r.height - window.innerHeight;
       const p = total > 0 ? Math.min(1, Math.max(0, -r.top / total)) : 0;
-      setBeat(Math.round(p * (N - 1)));
+      const x = p * (N - 1);
+      // --t runs 0 to 1 across the move from the opening view into the first step
+      stickyRef.current?.style.setProperty('--t', String(Math.min(1, Math.max(0, x)).toFixed(4)));
+      setBeat(Math.round(x));
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(read);
@@ -72,84 +77,93 @@ export function StoryVideo() {
 
   return (
     <section ref={sectionRef} id="how-it-works" aria-label="How iFarmer serves a farmer through the season" className="relative bg-[#FFFDF5]" style={{ height: `calc(${N * BEAT_VH}svh + 100svh)` }}>
-      <div className="sticky top-0 h-[100svh] w-full overflow-hidden bg-[#1d2b22]">
-        <Backdrop scene={b.scene} mobile={mobile} reduced={reduced} />
+      <div ref={stickyRef} className="sticky top-0 h-[100svh] w-full overflow-hidden bg-[#1d2b22] [--t:0]">
+        <div className="absolute inset-0" style={{ transform: 'scale(calc(1 + var(--t) * 0.06))' }}>
+          <Backdrop scene={b.scene} mobile={mobile} reduced={reduced} />
+        </div>
 
         {/* light from the left and the top: the story and the navigation sit on it */}
-        <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 z-[6] hidden w-[88%] bg-[linear-gradient(90deg,rgba(255,253,245,0.97)_0%,rgba(255,253,245,0.95)_46%,rgba(255,253,245,0.84)_62%,rgba(255,253,245,0.45)_78%,rgba(255,253,245,0)_100%)] lg:block" />
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[6] h-[24%] bg-gradient-to-b from-[rgba(255,253,245,0.94)] via-[rgba(255,253,245,0.55)] to-transparent" />
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-[6] hidden bg-[linear-gradient(90deg,rgba(255,253,245,0.97)_0%,rgba(255,253,245,0.95)_40%,rgba(255,253,245,0.88)_52%,rgba(255,253,245,0.7)_62%,rgba(255,253,245,0.4)_70%,rgba(255,253,245,0.12)_78%,rgba(255,253,245,0)_86%)] lg:block" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[6] h-[20%] bg-gradient-to-b from-[rgba(255,253,245,0.9)] via-[rgba(255,253,245,0.45)] to-transparent" />
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[6] h-[64%] bg-gradient-to-t from-[rgba(2,30,36,0.94)] via-[rgba(2,30,36,0.55)] to-transparent lg:hidden" />
 
         {/* ---------- desktop ---------- */}
-        <div className="absolute inset-0 z-20 hidden items-center pl-[clamp(2rem,5vw,6rem)] pt-[var(--header-h)] lg:flex">
-          {isIntro && (
-            <div className="lower-third w-[min(52vw,760px)]">
-              <ServiceOrbit onPick={goTo}>
-                <h1 className="text-[clamp(1.6rem,2.5vw,2.6rem)] font-bold leading-[1.04] tracking-[-0.035em] text-ink">{intro.title}</h1>
-                <p className="mt-2 text-[clamp(0.8rem,0.95vw,0.95rem)] font-bold text-field">Every service, from financing to payout</p>
-              </ServiceOrbit>
-              <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4 pl-[6%]">
-                <p className="max-w-[26rem] text-[1rem] leading-relaxed text-ink-soft">{intro.body}</p>
-                <div className="flex gap-3">
-                  <button type="button" onClick={() => goTo('finance')} className="btn-primary">
-                    Follow a season
-                  </button>
-                  <Link href="#paths" className="btn-ghost bg-white/70">
-                    Find your path
-                  </Link>
-                </div>
-              </div>
+        <div className="absolute inset-0 z-20 hidden lg:block">
+          {/* the opening view: the flywheel moves right, grows and fades as the reader moves into it */}
+          {!isOutro && (
+            <div className={`absolute inset-0 flex items-center pl-[clamp(2rem,5vw,6rem)] pt-[var(--header-h)] ${beat === 0 ? '' : 'pointer-events-none'}`}>
+              <IntroStage onPick={goTo} />
             </div>
           )}
-          {!isIntro && !isOutro && scene && <StepsArc beatIdx={beat} onPick={goTo} />}
+          {/* the first step comes forward out of it */}
+          {!isOutro && (
+            <div
+              className={`absolute inset-0 flex items-center pl-[clamp(2rem,5vw,6rem)] pt-[var(--header-h)] ${beat === 0 ? 'pointer-events-none' : ''}`}
+              style={{ opacity: 'calc((var(--t) - 0.42) * 1.9)', transform: 'scale(calc(0.93 + var(--t) * 0.07))', transformOrigin: '20% 50%' }}
+            >
+              <StepsArc beatIdx={Math.max(1, beat)} onPick={goTo} />
+            </div>
+          )}
           {isOutro && (
-            <div className="lower-third max-w-[40rem]">
-              <h2 className="text-[clamp(2rem,3.2vw,3rem)] font-bold leading-[1.05] tracking-tight text-ink">{outro.title}</h2>
-              <p className="mt-4 max-w-[32rem] text-[1.05rem] leading-relaxed text-ink-soft">{outro.body}</p>
-              <dl className="mt-7 grid grid-cols-2 gap-x-10 gap-y-5">
-                {headlineMetrics.slice(0, 4).map((id) => (
-                  <div key={id}>
-                    <dd className="whitespace-nowrap text-[2rem] font-bold leading-none text-field">{metrics[id].value}</dd>
-                    <dt className="mt-1 text-sm text-ink-soft">{metrics[id].label}</dt>
-                  </div>
-                ))}
-              </dl>
-              <p className="mt-4 text-xs text-ink-mute">To date, as published in {METRICS_AS_OF}.</p>
+            <div className="absolute inset-0 flex items-center pl-[clamp(2rem,5vw,6rem)] pt-[var(--header-h)]">
+              <div className="lower-third max-w-[40rem]">
+                <h2 className="text-[clamp(2rem,3.2vw,3rem)] font-bold leading-[1.05] tracking-tight text-ink">{outro.title}</h2>
+                <p className="mt-4 max-w-[32rem] text-[1.05rem] leading-relaxed text-ink-soft">{outro.body}</p>
+                <dl className="mt-7 grid grid-cols-2 gap-x-10 gap-y-5">
+                  {headlineMetrics.slice(0, 4).map((id) => (
+                    <div key={id}>
+                      <dd className="whitespace-nowrap text-[2rem] font-bold leading-none text-field">{metrics[id].value}</dd>
+                      <dt className="mt-1 text-sm text-ink-soft">{metrics[id].label}</dt>
+                    </div>
+                  ))}
+                </dl>
+                <p className="mt-4 text-xs text-ink-mute">To date, as published in {METRICS_AS_OF}.</p>
+              </div>
             </div>
           )}
         </div>
 
         {/* ---------- phones ---------- */}
         <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-7 text-white lg:hidden">
-          {isIntro && (
-            <div className="lower-third mx-auto max-w-[26rem] px-5">
-              <ServiceOrbit onPick={goTo} compact dark>
-                <h1 className="text-[1.08rem] font-bold leading-[1.1] tracking-tight text-white">{intro.title}</h1>
-                <p className="mt-1 text-[0.62rem] font-bold leading-snug text-lime">Every service, from financing to payout</p>
-              </ServiceOrbit>
-              <div className="mt-5 flex justify-center">
-                <button type="button" onClick={() => goTo('finance')} className="btn-primary !py-2.5">
-                  Follow a season
-                </button>
+          {!isOutro && (
+            <div className={`absolute inset-x-0 bottom-0 px-4 pb-7 ${beat === 0 ? '' : 'pointer-events-none'}`} style={{ opacity: 'calc(1 - var(--t) * 2)' }}>
+              <div className="mx-auto w-[min(78vw,330px)]" style={{ transform: 'translateX(calc(var(--t) * 30vw)) scale(calc(1 + var(--t) * 0.6))' }}>
+                <ServiceFlywheel onPick={goTo} compact dark>
+                  <span className="text-[0.7rem] font-bold leading-tight text-white">The farmer</span>
+                  <span className="text-[0.52rem] font-semibold leading-tight text-lime">at the centre</span>
+                </ServiceFlywheel>
               </div>
+              <h1 className="mt-5 text-[1.7rem] font-bold leading-[1.08] tracking-tight text-white">{intro.title}</h1>
+              <p className="mt-2 text-[0.92rem] leading-snug text-white/85">{about}</p>
+              <button type="button" onClick={() => goTo('finance')} className="btn-primary mt-4 !py-2.5">
+                Follow a season
+              </button>
             </div>
           )}
-          {!isIntro && !isOutro && scene && (
-            <div>
-              <MiniArc active={services.findIndex((s) => s.id === scene.id)} />
-              <div className="mt-4 flex items-end gap-4">
-                <div className="w-[94px] shrink-0">
-                  <Phone screen={b.screen} />
-                </div>
-                <div key={b.id} className="lower-third min-w-0">
-                  <p className="text-[0.8rem] font-bold text-lime">{scene.service}</p>
-                  <h2 className="mt-0.5 text-[1.35rem] font-bold leading-[1.1] tracking-tight text-white">{scene.title}</h2>
-                  <p className="mt-1.5 line-clamp-3 text-[0.85rem] leading-snug text-white/85">{scene.body}</p>
-                  <p className="mt-2 text-[0.8rem] text-white/80">
-                    <span className="font-bold text-white">In {b.app}:</span> {lower(b.does)}
-                  </p>
-                </div>
-              </div>
+          {!isOutro && (
+            <div className={beat === 0 ? 'pointer-events-none' : ''} style={{ opacity: 'calc((var(--t) - 0.3) * 1.7)' }}>
+              {(() => {
+                const sb = beats[Math.max(1, beat)];
+                const sc = sceneById(sb.scene)!;
+                return (
+                  <>
+                    <MiniArc active={services.findIndex((s) => s.id === sc.id)} />
+                    <div className="mt-4 flex items-end gap-4">
+                      <div className="w-[94px] shrink-0">
+                        <Phone screen={sb.screen} />
+                      </div>
+                      <div key={sb.id} className="lower-third min-w-0">
+                        <p className="text-[0.8rem] font-bold text-lime">{sc.service}</p>
+                        <h2 className="mt-0.5 text-[1.35rem] font-bold leading-[1.1] tracking-tight text-white">{sc.title}</h2>
+                        <p className="mt-1.5 line-clamp-3 text-[0.85rem] leading-snug text-white/85">{sc.body}</p>
+                        <p className="mt-2 text-[0.8rem] text-white/80">
+                          <span className="font-bold text-white">In {sb.app}:</span> {lower(sb.does)}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
           {isOutro && (
@@ -176,6 +190,49 @@ export function StoryVideo() {
 }
 
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+
+/* ------------------------------------------------------------------ the opening view (desktop) */
+
+function IntroStage({ onPick }: { onPick: (scene: string) => void }) {
+  return (
+    <div className="relative flex h-[min(calc(100svh-var(--header-h)-40px),680px)] items-center gap-[clamp(2rem,3.5vw,3.5rem)]">
+      <div
+        className="w-[min(calc((100svh-var(--header-h))*0.76),32vw)] shrink-0"
+        style={{ transform: 'translateX(calc(var(--t) * 36vw)) scale(calc(1 + var(--t) * 0.9))', opacity: 'calc(1 - var(--t) * 1.7)' }}
+      >
+        <div className="lower-third">
+          <ServiceFlywheel onPick={onPick}>
+            <span className="text-[clamp(0.9rem,1.15vw,1.1rem)] font-bold leading-tight text-ink">The farmer</span>
+            <span className="mt-0.5 max-w-[9rem] text-[clamp(0.64rem,0.78vw,0.76rem)] font-semibold leading-tight text-field">at the centre of every service</span>
+          </ServiceFlywheel>
+        </div>
+      </div>
+      <div className="w-[min(380px,27vw)]" style={{ opacity: 'calc(1 - var(--t) * 2.4)', transform: 'translateX(calc(var(--t) * -3vw))' }}>
+        <div className="lower-third">
+          <p className="text-[0.95rem] font-bold text-field">What iFarmer does</p>
+          <h1 className="mt-1 text-[clamp(1.9rem,2.9vw,2.9rem)] font-bold leading-[1.04] tracking-[-0.03em] text-ink">{intro.title}</h1>
+          <p className="mt-4 text-[1rem] leading-relaxed text-ink-soft">{about}</p>
+          <dl className="mt-5 grid grid-cols-3 gap-4">
+            {(['registeredFarmers', 'financeFacilitated', 'produceSold'] as const).map((id) => (
+              <div key={id}>
+                <dd className="whitespace-nowrap text-[clamp(1.1rem,1.5vw,1.45rem)] font-bold leading-none text-field">{metrics[id].value}</dd>
+                <dt className="mt-1 text-[0.78rem] leading-tight text-ink-soft">{metrics[id].label}</dt>
+              </div>
+            ))}
+          </dl>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button type="button" onClick={() => onPick('finance')} className="btn-primary">
+              Follow a season
+            </button>
+            <Link href="#paths" className="btn-ghost bg-white/70">
+              Find your path
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ------------------------------------------------------------------ background footage */
 
@@ -246,7 +303,7 @@ function ClipVideo({ clip, armed, active, start, scene, mobile, reduced }: { cli
 
 /* ------------------------------------------------------------------ steps on a half circle (desktop) */
 
-const ANGLES = [0, 40, 63, 82, 100];
+const ANGLES = [0, 48, 68, 84, 100];
 
 function StepsArc({ beatIdx, onPick }: { beatIdx: number; onPick: (scene: string) => void }) {
   const stage = useRef<HTMLDivElement>(null);
@@ -265,16 +322,16 @@ function StepsArc({ beatIdx, onPick }: { beatIdx: number; onPick: (scene: string
   const phoneW = (phoneH * 300) / 632;
   const cx = phoneW / 2;
   const cy = H / 2;
-  const R = phoneW / 2 + H * 0.3;
+  const R = phoneW / 2 + H * 0.24;
   const arc = (a0: number, a1: number) => {
-    const p = (a: number) => [R + R * Math.cos((a * Math.PI) / 180), R + R * Math.sin((a * Math.PI) / 180)];
+    const p = (a: number) => [Math.round((R + R * Math.cos((a * Math.PI) / 180)) * 100) / 100, Math.round((R + R * Math.sin((a * Math.PI) / 180)) * 100) / 100];
     const [x0, y0] = p(a0);
     const [x1, y1] = p(a1);
     return `M ${x0} ${y0} A ${R} ${R} 0 0 1 ${x1} ${y1}`;
   };
 
   return (
-    <div ref={stage} className="relative h-[min(calc(100svh-var(--header-h)-40px),680px)]" style={{ width: cx + R + 46 + 400 }}>
+    <div ref={stage} className="relative h-[min(calc(100svh-var(--header-h)-40px),680px,48vw)]" style={{ width: cx + R + 46 + 380 }}>
       {/* the half circle: travelled part above the front, the rest below */}
       <svg aria-hidden className="absolute overflow-visible" style={{ left: cx - R, top: cy - R, width: 2 * R, height: 2 * R }} viewBox={`0 0 ${2 * R} ${2 * R}`}>
         <path d={arc(-100, 0)} fill="none" stroke="#88BB41" strokeOpacity="0.7" strokeWidth="2.5" strokeLinecap="round" />
@@ -320,7 +377,7 @@ function StepsArc({ beatIdx, onPick }: { beatIdx: number; onPick: (scene: string
       </div>
 
       {/* the story for this step */}
-      <div className="absolute w-[min(400px,28vw)] -translate-y-1/2" style={{ left: cx + R + 46, top: cy }}>
+      <div className="absolute w-[min(380px,27vw)] -translate-y-1/2" style={{ left: cx + R + 46, top: cy }}>
        <div key={scene.id} className="lower-third">
         <p className="text-[0.95rem] font-bold text-field">{scene.service}</p>
         <h2 className="mt-1 text-[clamp(1.7rem,2.5vw,2.4rem)] font-bold leading-[1.06] tracking-tight text-ink">{scene.title}</h2>
@@ -328,7 +385,7 @@ function StepsArc({ beatIdx, onPick }: { beatIdx: number; onPick: (scene: string
         <p key={b.id} className="thread-open mt-3 text-[0.95rem] text-ink-soft">
           <span className="font-bold text-ink">In {b.app}:</span> {lower(b.does)}
         </p>
-        <div className="mt-3 hidden [@media(min-height:760px)]:block">
+        <div className="mt-3 hidden [@media(min-height:860px)]:block">
           <Channels items={scene.channels} />
         </div>
         {scene.more && (

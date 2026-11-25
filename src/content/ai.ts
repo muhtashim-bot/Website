@@ -30,6 +30,48 @@ export const voiceAI = {
   ],
 };
 
+/** The Voice AI outcomes as a scrolling phone walkthrough on the AI & Data page. */
+export const voiceWalk = {
+  title: voiceAI.title,
+  steps: [
+    {
+      title: 'Farmer profile',
+      body: voiceAI.outcomes[0].body,
+      details: ['Taken from a natural conversation in Bangla', 'Saved as structured data, not call notes', 'Used by every other service: finance, advice, inputs and markets'],
+      screen: 'voice-profile',
+      callouts: ['Spoken in Bangla', 'Saved as data'],
+    },
+    {
+      title: 'Credit inputs',
+      body: 'What the farmer shares is added to KYC, transaction and repayment data.',
+      details: ['Helps assess farmers with little or no formal credit history', 'Voice AI collects information; it does not decide', 'The credit team or lending partner makes the credit decision'],
+      screen: 'voice-credit',
+      callouts: ['Adds to the assessment', 'People decide'],
+    },
+    {
+      title: 'Advisory',
+      body: voiceAI.outcomes[2].body,
+      details: ['Questions on crops, pests, fertilizer and farm practices', 'Answers come from iFarmer’s agronomist-reviewed knowledge base', 'Complex cases go to an agronomist or the field team'],
+      screen: 'voice-advice',
+      callouts: ['Answers in Bangla', 'Expert handover'],
+    },
+    {
+      title: 'Input sales',
+      body: voiceAI.outcomes[3].body,
+      details: ['The crop and its stage point to the right product', 'Inputs come through KriShop partner shops', 'A follow-up makes sure the order arrives in time'],
+      screen: 'voice-inputs',
+      callouts: ['Right input, right stage', 'Order follow-up'],
+    },
+    {
+      title: 'Procurement',
+      body: voiceAI.outcomes[4].body,
+      details: ['Captured before harvest, in the same call', 'Feeds iFarmer’s procurement planning and buyer matching', 'Collection is planned at the nearest iFarmer Center'],
+      screen: 'voice-procure',
+      callouts: ['Before harvest', 'Buyer match'],
+    },
+  ],
+};
+
 export const folonAI = {
   title: 'Expert farming advice, any time, in Bangla.',
   body: 'Folon-AI is iFarmer’s AI-powered advisory assistant in the Folon app. Farmers can type, speak or send a photo. It answers questions about crops, pests, fertilizer and farm practices using iFarmer’s agricultural knowledge base, and hands complex cases to our agronomists.',
