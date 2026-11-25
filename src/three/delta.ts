@@ -115,7 +115,7 @@ function riverDist(x: number, z: number) {
 // from the view), dof = blur strength, s = how far the subject sits right of centre on wide screens.
 type Key = { t: THREE.Vector3; d: number; b: number; e: number; sun: number; az: number | null; dof: number; s?: number; orbit?: number };
 const KEYS: Record<string, Key> = {
-  intro: { t: V(15, 0, 10), d: 215, b: -130, e: 21, sun: 12, az: 70, dof: 0, s: 0.3, orbit: 24 },
+  intro: { t: V(15, 0, 10), d: 215, b: -130, e: 21, sun: 17, az: 70, dof: 0, s: 0.3, orbit: 24 },
   apply: { t: V(1.5, 1.6, -1.5), d: 7.5, b: 36, e: 7, sun: 16, az: null, dof: 1, s: 0.16 },
   fund: { t: V(-102, 5, -48), d: 36, b: -30, e: 12, sun: 24, az: null, dof: 0.5 },
   receive: { t: V(-45, 8, -24), d: 75, b: -110, e: 16, sun: 32, az: null, dof: 0.2 },
@@ -1397,17 +1397,17 @@ export class DeltaWorld {
       s.add(aw);
       if (i !== 4) {
         const bd = mesh(new THREE.PlaneGeometry(3.6, 0.7), mat(['#c0392b', '#1f6fb2', '#e3a21a', '#2e8b57', '#8e44ad', '#d35400', '#16a085', '#b03a2e'][i % 8], 0.6), false, false);
-        bd.position.set(h.position.x, 3.35, BAZAAR.z - 1.24);
+        bd.position.set(h.position.x, 3.05, BAZAAR.z - 0.82);
         s.add(bd);
       }
     }
     // KriShop shop: the fourth shop gets the sign and stock
     const kx = BAZAAR.x - 22 + 4 * 6;
     const sg = this.sign('KriShop', 4.4, 0.9, '#17201B', '#ffffff');
-    sg.position.set(kx, 3.35, BAZAAR.z - 1.2);
+    sg.position.set(kx, 3.1, BAZAAR.z - 0.8);
     s.add(sg);
     const leaf = mesh(new THREE.CircleGeometry(0.26, 16), new THREE.MeshStandardMaterial({ color: '#88BB41', emissive: '#88BB41', emissiveIntensity: 0.3 }), false, false);
-    leaf.position.set(kx + 1.55, 3.36, BAZAAR.z - 1.18);
+    leaf.position.set(kx + 1.55, 3.11, BAZAAR.z - 0.78);
     s.add(leaf);
     for (let i = 0; i < 12; i++) {
       const sk = this.sack();
@@ -1416,7 +1416,7 @@ export class DeltaWorld {
       s.add(sk);
       this.shopSacks.push(sk);
     }
-    this.anchors.shop = V(kx, 4.4, BAZAAR.z - 1);
+    this.anchors.shop = V(kx, 4.2, BAZAAR.z - 0.8);
     const spots: { p: THREE.Vector3; kind: 'crown' | 'palm' | 'banana' | 'areca'; s: number }[] = [];
     for (let i = 0; i < 22; i++) spots.push({ p: V(BAZAAR.x - 30 + R() * 60, 0, BAZAAR.z - 14 - R() * 20), kind: R() < 0.6 ? 'crown' : 'palm', s: 0.9 + R() * 0.4 });
     this.plantTrees(spots);
