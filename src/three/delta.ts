@@ -8,20 +8,7 @@
  */
 import * as THREE from 'three';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
-import { Water } from 'three/examples/jsm/objects/Water.js';
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import {
-  BloomEffect,
-  DepthOfFieldEffect,
-  EffectComposer,
-  EffectPass,
-  RenderPass,
-  SMAAEffect,
-  ToneMappingEffect,
-  ToneMappingMode,
-  VignetteEffect,
-} from 'postprocessing';
-import { N8AOPostPass } from 'n8ao';
 
 export type Quality = 'high' | 'low';
 
@@ -234,9 +221,14 @@ export class DeltaWorld {
   private ids: string[];
   private vel = 0;
   private loopUni = { uTime: { value: 0 }, uOpacity: { value: 0 }, uDraw: { value: 0 } };
-  private composer?: EffectComposer;
-  private dof?: DepthOfFieldEffect;
-  private ao?: N8AOPostPass;
+  private camKeys: { t: THREE.Vector3; ld: number; b: number; e: number }[] = [];
+  private lastInput = 0;
+  private snapMode = false;
+  private dpr = 1;
+  private dprMin = 0.75;
+  private frameTimes: number[] = [];
+  private size = { w: 0, h: 0 };
+  private waterTex?: THREE.Texture;
   private sky!: Sky;
   private sun!: THREE.DirectionalLight;
   private hemi!: THREE.HemisphereLight;
@@ -244,8 +236,6 @@ export class DeltaWorld {
   private pmrem!: THREE.PMREMGenerator;
   private envRT?: THREE.WebGLRenderTarget;
   private skyScene = new THREE.Scene();
-  private lastEnvSun = -99;
-  private water?: Water;
   private windUni: Uniforms = { uTime: { value: 0 } };
   private cropUni: Required<Uniforms> = { uTime: { value: 0 }, uGrow: { value: 0.25 }, uRipen: { value: 0 }, uHarvest: { value: 0 } };
   private plotCount = 0;
@@ -273,16 +263,27 @@ export class DeltaWorld {
     this.opts = opts;
     this.high = opts.quality === 'high';
     this.ids = beatIds;
-    const r = new THREE.WebGLRenderer({ canvas, antialias: !this.high, powerPreference: 'high-performance', stencil: false, depth: true });
-    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.high ? 1.5 : 1.25));
+    const r = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', stencil: false, depth: true });
+    this.dpr = Math.min(window.devicePixelRatio || 1, this.high ? 1.25 : 1.1);
+    this.dprMin = this.high ? 0.8 : 0.7;
+    r.setPixelRatio(this.dpr);
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.shadowMap.enabled = true;
-    r.shadowMap.type = THREE.PCFSoftShadowMap;
-    r.toneMapping = this.high ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
-    r.toneMappingExposure = 0.62;
+    r.shadowMap.type = THREE.PCFShadowMap;
+    r.toneMapping = THREE.ACESFilmicToneMapping;
+    r.toneMappingExposure = 0.66;
+    this.snapMode = new URLSearchParams(window.location.search).has('snap');
     this.renderer = r;
     this.camera = new THREE.PerspectiveCamera(36, 1, 0.3, 4000);
     this.pmrem = new THREE.PMREMGenerator(r);
+
+    let prevB = 0;
+    this.camKeys = beatIds.map((id, i) => {
+      const k = KEYS[id] ?? KEYS.intro;
+      const b = i ? prevB + wrapDeg(k.b - prevB) : k.b;
+      prevB = b;
+      return { t: k.t, ld: Math.log(k.d), b, e: k.e };
+    });
 
     this.buildSky();
     this.buildLand();
@@ -299,7 +300,8 @@ export class DeltaWorld {
     this.buildBoats();
     this.buildArcs();
     this.buildSkyLife();
-    if (this.high) this.buildComposer();
+    this.instanceSacks();
+    this.buildEnv();
     this.resize();
     this.apply(0, 0);
   }
@@ -326,6 +328,7 @@ export class DeltaWorld {
     const sun = new THREE.DirectionalLight('#fff1dc', 3.2);
     sun.castShadow = true;
     sun.shadow.mapSize.set(this.high ? 2048 : 1024, this.high ? 2048 : 1024);
+    sun.shadow.radius = 2;
     const c = sun.shadow.camera;
     c.left = -70;
     c.right = 70;
@@ -350,18 +353,14 @@ export class DeltaWorld {
     this.hemi.intensity = lerp(0.18, 0.32, smooth(0, 30, elev));
     const fog = this.scene.fog as THREE.FogExp2;
     fog.color.setRGB(lerp(0.72, 0.93, low), lerp(0.8, 0.76, low), lerp(0.86, 0.64, low));
-    if (this.water) {
-      this.water.material.uniforms.sunDirection.value.copy(this.sunDir).normalize();
-      this.water.material.uniforms.sunColor.value.copy(this.sun.color);
-    }
-    // the environment map follows the sky, refreshed only when the sun has moved enough
-    if (Math.abs(elev - this.lastEnvSun) > 2.5) {
-      this.lastEnvSun = elev;
-      this.envRT?.dispose();
-      this.envRT = this.pmrem.fromScene(this.skyScene as unknown as THREE.Scene, 0, 1, 25000);
-      this.scene.environment = this.envRT.texture;
-      this.scene.environmentIntensity = lerp(0.25, 0.55, smooth(0, 30, elev));
-    }
+    this.scene.environmentIntensity = lerp(0.3, 0.55, smooth(0, 30, elev));
+  }
+
+  /** Sky lighting for reflections, rendered once at load (re-rendering it while scrolling caused hitches). */
+  private buildEnv() {
+    this.setSun(30, 120);
+    this.envRT = this.pmrem.fromScene(this.skyScene as unknown as THREE.Scene, 0, 1, 25000);
+    this.scene.environment = this.envRT.texture;
   }
 
   /* ------------------------------ land: one big terrain with a painted field patchwork */
@@ -512,31 +511,14 @@ export class DeltaWorld {
     g.computeVertexNormals();
 
     const normals = this.waterNormals();
-    if (this.high) {
-      const w = new Water(g, {
-        textureWidth: 512,
-        textureHeight: 512,
-        waterNormals: normals,
-        sunDirection: new THREE.Vector3(0.5, 0.5, 0),
-        sunColor: 0xfff1dc,
-        waterColor: 0x40523a,
-        distortionScale: 2.2,
-        fog: true,
-      });
-      w.material.uniforms.size.value = 3.5;
-      w.material.side = THREE.DoubleSide;
-      w.rotation.x = -Math.PI / 2;
-      w.position.y = -1.35;
-      this.water = w;
-      this.scene.add(w);
-    } else {
-      const m = new THREE.MeshStandardMaterial({ color: '#4c5f44', roughness: 0.12, metalness: 0.1, normalMap: normals, side: THREE.DoubleSide });
-      m.normalScale.set(0.3, 0.3);
-      const w = mesh(g, m, false, false);
-      w.rotation.x = -Math.PI / 2;
-      w.position.y = -1.35;
-      this.scene.add(w);
-    }
+    normals.repeat.set(1, 1);
+    this.waterTex = normals;
+    const m = new THREE.MeshStandardMaterial({ color: '#465a44', roughness: 0.06, metalness: 0.2, normalMap: normals, side: THREE.DoubleSide, envMapIntensity: 1.2 });
+    m.normalScale.set(0.35, 0.35);
+    const w = mesh(g, m, false, true);
+    w.rotation.x = -Math.PI / 2;
+    w.position.y = -1.35;
+    this.scene.add(w);
   }
 
   private waterNormals() {
@@ -711,7 +693,7 @@ export class DeltaWorld {
 
     // rice tuft: six curved blades
     const blade = (ang: number, lean: number, h: number) => {
-      const segs = 4;
+      const segs = 2;
       const g = new THREE.BufferGeometry();
       const v: number[] = [];
       const idx: number[] = [];
@@ -732,10 +714,10 @@ export class DeltaWorld {
       return g;
     };
     const parts: THREE.BufferGeometry[] = [];
-    for (let i = 0; i < 7; i++) parts.push(blade((i / 7) * Math.PI * 2 + i, 0.18 + (i % 3) * 0.08, 0.85 + (i % 2) * 0.15));
+    for (let i = 0; i < 4; i++) parts.push(blade((i / 4) * Math.PI * 2 + i, 0.18 + (i % 3) * 0.08, 0.85 + (i % 2) * 0.15));
     const tuft = mergeGeometries(parts)!;
     tuft.computeVertexNormals();
-    const spacing = this.high ? 0.42 : 0.62;
+    const spacing = this.high ? 0.55 : 0.8;
     const perX = Math.floor(pw / spacing);
     const perZ = Math.floor(pd / spacing);
     const count = plots.length * perX * perZ;
@@ -763,7 +745,7 @@ export class DeltaWorld {
         }
     });
     tuft.setAttribute('aPlot', new THREE.InstancedBufferAttribute(plotAttr, 1));
-    rice.castShadow = true;
+    rice.castShadow = false;
     rice.receiveShadow = true;
     rice.frustumCulled = false;
     this.scene.add(rice);
@@ -954,9 +936,9 @@ export class DeltaWorld {
     const blobs: { c: THREE.Vector3; r: number }[] = [];
     for (let i = 0; i < 6; i++) blobs.push({ c: V((R() - 0.5) * 3.4, 5.2 + R() * 2, (R() - 0.5) * 3.4), r: 1.7 + R() * 1.0 });
     const crownC = V(0, 6.2, 0);
-    const blobGeo = (detail: number, shade: number) =>
-      blobs.map((bl, i) => {
-        const ico = new THREE.IcosahedronGeometry(bl.r, detail);
+    const blobGeo = (detail: number, shade: number, list: { c: THREE.Vector3; r: number; d?: number }[] = blobs) =>
+      list.map((bl, i) => {
+        const ico = new THREE.IcosahedronGeometry(bl.r, bl.d ?? detail);
         ico.deleteAttribute('uv');
         ico.deleteAttribute('normal');
         const b = mergeVertices(ico);
@@ -979,7 +961,7 @@ export class DeltaWorld {
     const cards: THREE.BufferGeometry[] = [];
     const q = new THREE.Quaternion();
     const nrm = new THREE.Vector3();
-    for (let i = 0; i < 280; i++) {
+    for (let i = 0; i < (this.high ? 280 : 170); i++) {
       const bl = blobs[i % blobs.length];
       const dir = V(R() - 0.5, R() - 0.25, R() - 0.5).normalize();
       const c = bl.c.clone().addScaledVector(dir, bl.r * (0.8 + R() * 0.32));
@@ -998,7 +980,13 @@ export class DeltaWorld {
     }
     const crownLeaf = mergeGeometries(cards)!;
     // far crowns: soft rounded canopy only
-    const crownFar = mergeGeometries([...wood.map((g) => g.clone()), ...blobGeo(1, 1)])!;
+    const farBlobs = [
+      { c: V(0, 5.6, 0), r: 2.7 },
+      { c: V(-1.3, 6.5, 0.9), r: 2, d: 0 },
+      { c: V(1.3, 6.4, -0.8), r: 2, d: 0 },
+    ];
+    const farTrunk = tint(solid(new THREE.CylinderGeometry(0.24, 0.4, 4.6, 5, 1).translate(0, 2.3, 0)), () => bark);
+    const crownFar = mergeGeometries([farTrunk, ...blobGeo(1, 1, farBlobs)])!;
 
     // coconut palm: curved trunk and textured fronds
     const curve = new THREE.QuadraticBezierCurve3(V(0, 0, 0), V(0.4, 4, 0), V(1.4, 9, 0));
@@ -1100,8 +1088,8 @@ export class DeltaWorld {
         const im = new THREE.InstancedMesh(part.geo, m, list.length);
         mats4.forEach((mm, i) => im.setMatrixAt(i, mm));
         cols.forEach((cc, i) => im.setColorAt(i, cc));
-        im.castShadow = true;
-        im.receiveShadow = true;
+        im.castShadow = near;
+        im.receiveShadow = near;
         this.scene.add(im);
       });
     });
@@ -1422,11 +1410,43 @@ export class DeltaWorld {
     this.plantTrees(spots);
   }
 
+  private sackMarkers: THREE.Object3D[] = [];
+  // people, vehicles, boats and sacks: their shadows only matter in close shots
+  private smallCasters: THREE.Object3D[] = [];
+  private smallShadows = true;
+  private sackSets: { im: THREE.InstancedMesh; marks: THREE.Object3D[] }[] = [];
+  /** A placeholder for one sack. All sacks are drawn as instanced meshes, see instanceSacks(). */
   private sack() {
-    const s = mesh(new THREE.CapsuleGeometry(0.26, 0.34, 4, 10), mat(hash2(this.sacks.length, 7) > 0.5 ? '#e6e0cf' : '#cbb38a', 0.95));
+    const s = new THREE.Object3D();
     s.rotation.z = Math.PI / 2;
     s.scale.set(1, 1, 0.7);
+    s.visible = false;
+    this.sackMarkers.push(s);
     return s;
+  }
+  private instanceSacks() {
+    const geo = new THREE.CapsuleGeometry(0.26, 0.34, 3, 8);
+    const m = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.95 });
+    const byParent = new Map<THREE.Object3D, THREE.Object3D[]>();
+    this.sackMarkers.forEach((mk) => {
+      const p = mk.parent ?? this.scene;
+      if (!byParent.has(p)) byParent.set(p, []);
+      byParent.get(p)!.push(mk);
+    });
+    const c = new THREE.Color();
+    byParent.forEach((marks, parent) => {
+      const im = new THREE.InstancedMesh(geo, m, marks.length);
+      marks.forEach((mk, k) => {
+        mk.updateMatrix();
+        im.setMatrixAt(k, mk.matrix);
+        im.setColorAt(k, c.set(hash2(k, marks.length) > 0.5 ? '#e6e0cf' : '#cbb38a'));
+      });
+      im.castShadow = true;
+      im.receiveShadow = true;
+      parent.add(im);
+      this.smallCasters.push(im);
+      this.sackSets.push({ im, marks });
+    });
   }
 
   /* ------------------------------ iFarmer Center and collection point at the river ghat */
@@ -1523,7 +1543,7 @@ export class DeltaWorld {
       const cx = 40 + Math.cos(a) * d;
       const cz = 30 + Math.sin(a) * d;
       if (riverDist(cx, cz) < RIVER_W + 30) continue;
-      const n = 25 + Math.floor(R() * 45);
+      const n = Math.round((25 + Math.floor(R() * 45)) * (this.high ? 0.8 : 0.45));
       for (let i = 0; i < n; i++) {
         const r = Math.sqrt(R()) * (20 + R() * 20);
         const t = R() * Math.PI * 2;
@@ -1583,85 +1603,90 @@ export class DeltaWorld {
     return m;
   }
 
-  /** A villager: shaped torso, a face that shows which way they look, elbows, a checked lungi and sandals. Faces +z. */
+  private personMat?: THREE.MeshStandardMaterial;
+  /** A villager: shaped torso, a face that shows which way they look, elbows, a checked lungi and sandals. Faces +z.
+   *  Each rigid part is one merged, vertex-coloured mesh, so a person costs a few draw calls instead of twenty. */
   private person(shirt: string, lower: string, scale = 1): { g: THREE.Group; parts: PersonParts } {
+    if (!this.personMat) this.personMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82 });
+    const pm = this.personMat;
+    const SKIN = new THREE.Color('#86573a');
+    const CLOTH = new THREE.Color(shirt);
+    const TRIM = new THREE.Color(shirt).multiplyScalar(0.82);
+    const HAIR = new THREE.Color('#18120e');
+    const SOLE = new THREE.Color('#2a2420');
+    const paint = (g: THREE.BufferGeometry, c: THREE.Color) => {
+      g.deleteAttribute('uv');
+      const n = g.attributes.position.count;
+      const a = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b], i * 3);
+      g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+      return g;
+    };
+    const merged = (list: THREE.BufferGeometry[]) => {
+      const m = new THREE.Mesh(mergeGeometries(list)!, pm);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      this.smallCasters.push(m);
+      return m;
+    };
     const g = new THREE.Group();
-    const skin = mat('#86573a', 0.6);
-    const cloth = mat(shirt, 0.92);
-    const trim = mat(new THREE.Color(shirt).multiplyScalar(0.82).getStyle(), 0.9);
     const torso = new THREE.Group();
     torso.position.y = 0.95;
     const prof = [
       [0.001, 0], [0.15, 0], [0.158, 0.12], [0.152, 0.26], [0.172, 0.42], [0.19, 0.52], [0.15, 0.6], [0.06, 0.645], [0.001, 0.65],
     ].map(([x, y]) => new THREE.Vector2(x, y));
-    const chestG = new THREE.LatheGeometry(prof, 18);
-    chestG.scale(1.22, 1, 0.8);
-    const chest = mesh(chestG, cloth);
-    const placket = mesh(new THREE.BoxGeometry(0.022, 0.42, 0.012), trim, false);
-    placket.position.set(0, 0.36, 0.128);
-    const collar = mesh(new THREE.TorusGeometry(0.062, 0.016, 6, 14), trim, false);
-    collar.rotation.x = Math.PI / 2;
-    collar.position.y = 0.635;
-    const neck = mesh(new THREE.CylinderGeometry(0.048, 0.052, 0.1, 10), skin);
-    neck.position.y = 0.69;
-    const head = new THREE.Group();
-    head.position.y = 0.8;
-    const skull = mesh(new THREE.SphereGeometry(0.108, 18, 14), skin);
-    skull.scale.set(0.92, 1.06, 1);
-    const nose = mesh(new THREE.ConeGeometry(0.02, 0.05, 6), skin, false);
-    nose.rotation.x = Math.PI / 2;
-    nose.position.set(0, -0.012, 0.106);
-    const hair = mesh(new THREE.SphereGeometry(0.115, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.52), mat('#18120e', 0.75));
-    hair.position.set(0, 0.018, -0.012);
-    hair.rotation.x = -0.25;
-    const ears = [-1, 1].map((sx) => {
-      const e = mesh(new THREE.SphereGeometry(0.022, 8, 6), skin, false);
-      e.position.set(sx * 0.1, -0.005, -0.005);
-      return e;
-    });
-    head.add(skull, nose, hair, ...ears);
-    torso.add(chest, placket, collar, neck, head);
+    const chest = new THREE.LatheGeometry(prof, 14);
+    chest.scale(1.22, 1, 0.8);
+    const placket = new THREE.BoxGeometry(0.022, 0.42, 0.012).translate(0, 0.36, 0.128);
+    const collar = new THREE.TorusGeometry(0.062, 0.016, 5, 12).rotateX(Math.PI / 2).translate(0, 0.635, 0);
+    const neck = new THREE.CylinderGeometry(0.048, 0.052, 0.1, 8).translate(0, 0.69, 0);
+    const skull = new THREE.SphereGeometry(0.108, 14, 10).scale(0.92, 1.06, 1).translate(0, 0.8, 0);
+    const nose = new THREE.ConeGeometry(0.02, 0.05, 5).rotateX(Math.PI / 2).translate(0, 0.788, 0.106);
+    const hair = new THREE.SphereGeometry(0.115, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.52).rotateX(-0.25).translate(0, 0.818, -0.012);
+    const earL = new THREE.SphereGeometry(0.022, 6, 4).translate(-0.1, 0.795, -0.005);
+    const earR = new THREE.SphereGeometry(0.022, 6, 4).translate(0.1, 0.795, -0.005);
+    const knot = new THREE.TorusGeometry(0.2, 0.022, 5, 16).rotateX(Math.PI / 2).translate(0, 0.01, 0);
+    torso.add(
+      merged([
+        paint(chest, CLOTH),
+        paint(placket, TRIM),
+        paint(collar, TRIM),
+        paint(neck, SKIN),
+        paint(skull, SKIN),
+        paint(nose, SKIN),
+        paint(hair, HAIR),
+        paint(earL, SKIN),
+        paint(earR, SKIN),
+        paint(knot, new THREE.Color(lower)),
+      ]),
+    );
     const mkArm = (x: number) => {
       const a = new THREE.Group();
       a.position.set(x, 0.54, 0);
-      const sh = mesh(new THREE.SphereGeometry(0.062, 10, 8), cloth);
-      const up = mesh(new THREE.CapsuleGeometry(0.052, 0.24, 3, 8), cloth);
-      up.position.y = -0.16;
+      a.add(merged([paint(new THREE.SphereGeometry(0.062, 8, 6), CLOTH), paint(new THREE.CapsuleGeometry(0.052, 0.24, 2, 6).translate(0, -0.16, 0), CLOTH)]));
       const elbow = new THREE.Group();
       elbow.position.y = -0.32;
-      const fore = mesh(new THREE.CapsuleGeometry(0.042, 0.2, 3, 8), skin);
-      fore.position.y = -0.13;
-      const hand = mesh(new THREE.SphereGeometry(0.046, 8, 6), skin);
-      hand.scale.set(0.8, 1.15, 0.9);
-      hand.position.y = -0.29;
-      elbow.add(fore, hand);
-      a.add(sh, up, elbow);
+      elbow.add(merged([paint(new THREE.CapsuleGeometry(0.042, 0.2, 2, 6).translate(0, -0.13, 0), SKIN), paint(new THREE.SphereGeometry(0.046, 6, 5).scale(0.8, 1.15, 0.9).translate(0, -0.29, 0), SKIN)]));
+      a.add(elbow);
       a.userData.elbow = elbow;
       torso.add(a);
       return a;
     };
     const armL = mkArm(-0.215);
     const armR = mkArm(0.215);
-    const lungi = mesh(new THREE.CylinderGeometry(0.2, 0.27, 0.62, 16, 1, true), this.lungiMat(lower));
+    const lungi = mesh(new THREE.CylinderGeometry(0.2, 0.27, 0.62, 14, 1, true), this.lungiMat(lower));
     lungi.position.y = 0.66;
-    const knot = mesh(new THREE.TorusGeometry(0.2, 0.022, 6, 18), mat(lower, 0.95), false);
-    knot.rotation.x = Math.PI / 2;
-    knot.position.y = 0.96;
+    this.smallCasters.push(lungi);
     const mkLeg = (x: number) => {
       const l = new THREE.Group();
       l.position.set(x, 0.62, 0);
-      const shin = mesh(new THREE.CapsuleGeometry(0.05, 0.42, 3, 8), skin);
-      shin.position.y = -0.33;
-      const foot = mesh(new THREE.BoxGeometry(0.085, 0.035, 0.2), mat('#2a2420', 0.8));
-      foot.position.set(0, -0.6, 0.045);
-      l.add(shin, foot);
+      l.add(merged([paint(new THREE.CapsuleGeometry(0.05, 0.42, 2, 6).translate(0, -0.33, 0), SKIN), paint(new THREE.BoxGeometry(0.085, 0.035, 0.2).translate(0, -0.6, 0.045), SOLE)]));
       return l;
     };
     const legL = mkLeg(-0.08);
     const legR = mkLeg(0.08);
-    g.add(torso, lungi, knot, legL, legR);
+    g.add(torso, lungi, legL, legR);
     g.scale.setScalar(scale);
-    g.traverse((o) => ((o as THREE.Mesh).isMesh ? ((o.castShadow = true), (o.receiveShadow = true)) : null));
     return { g, parts: { legL, legR, armL, armR, torso } };
   }
 
@@ -1677,7 +1702,6 @@ export class DeltaWorld {
     (f.parts.armR.userData.elbow as THREE.Group).rotation.x = -1.45;
     f.parts.armL.rotation.set(-0.2, 0, -0.08);
     (f.parts.armL.userData.elbow as THREE.Group).rotation.x = -0.25;
-    (f.parts.torso.children.find((c) => c instanceof THREE.Group) as THREE.Group).rotation.x = 0.14;
     this.phone = mesh(new THREE.BoxGeometry(0.075, 0.15, 0.012), new THREE.MeshStandardMaterial({ color: '#111', emissive: new THREE.Color('#ddff80'), emissiveIntensity: 0.2, roughness: 0.3 }), false);
     this.phone.position.set(0, -0.3, 0.035);
     this.phone.rotation.x = 1.35;
@@ -1710,12 +1734,12 @@ export class DeltaWorld {
     const lowers = ['#2f6a86', '#5a4a3a', '#3d5a40', '#7a6a4a', '#2c3e50'];
     const R = rng(91);
     const paths = [this.roadCurves.village, this.roadCurves.field, this.roadCurves.village, this.roadCurves.field, this.roadCurves.village];
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < (this.high ? 16 : 9); i++) {
       const p = this.person(shirts[i % shirts.length], lowers[i % lowers.length], 0.95 + R() * 0.1);
       s.add(p.g);
       this.walkers.push({ ...p, path: paths[i % paths.length], speed: (0.6 + R() * 0.4) / paths[i % paths.length].getLength(), offset: R(), mode: 'walk' });
     }
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < (this.high ? 10 : 6); i++) {
       const p = this.person(shirts[(i + 3) % shirts.length], lowers[i % lowers.length]);
       const x = 112 + (i % 5) * 4 + R() * 2;
       const z = 46 + Math.floor(i / 5) * 6 + R() * 2;
@@ -1795,6 +1819,7 @@ export class DeltaWorld {
   private buildVehicles() {
     const add = (kind: 'cng' | 'van' | 'truck', path: THREE.CatmullRomCurve3, beat: string, from: number, to: number, t0 = 0.05, t1 = 0.9) => {
       const v = this.vehicle(kind);
+      v.g.traverse((o) => (o as THREE.Mesh).isMesh && this.smallCasters.push(o));
       this.scene.add(v.g);
       this.vehicles.push({ ...v, path, beat, from, to, t0, t1 });
     };
@@ -1844,6 +1869,7 @@ export class DeltaWorld {
       g.traverse((o) => ((o as THREE.Mesh).isMesh ? (o.castShadow = true) : null));
       this.scene.add(g);
       this.boats.push({ g, t: i / 7 + R() * 0.05, speed: (0.0035 + R() * 0.003) * (R() < 0.5 ? 1 : -1) });
+      g.traverse((o) => (o as THREE.Mesh).isMesh && this.smallCasters.push(o));
     }
   }
 
@@ -1981,30 +2007,6 @@ export class DeltaWorld {
     this.scene.add(drone);
   }
 
-  /* ------------------------------ post-processing */
-  private buildComposer() {
-    const r = this.renderer;
-    const composer = new EffectComposer(r, { frameBufferType: THREE.HalfFloatType, multisampling: 0 });
-    composer.addPass(new RenderPass(this.scene, this.camera));
-    const ao = new N8AOPostPass(this.scene, this.camera, 1, 1);
-    ao.configuration.aoRadius = 4;
-    ao.configuration.distanceFalloff = 1.5;
-    ao.configuration.intensity = 2.2;
-    ao.configuration.halfRes = true;
-    ao.configuration.depthAwareUpsampling = true;
-    ao.setQualityMode('Medium');
-    composer.addPass(ao);
-    this.ao = ao;
-    const dof = new DepthOfFieldEffect(this.camera, { worldFocusDistance: 20, worldFocusRange: 30, bokehScale: 0, resolutionScale: 0.5 });
-    this.dof = dof;
-    composer.addPass(new EffectPass(this.camera, dof));
-    const bloom = new BloomEffect({ intensity: 0.55, luminanceThreshold: 0.82, luminanceSmoothing: 0.25, mipmapBlur: true });
-    const tone = new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC });
-    composer.addPass(new EffectPass(this.camera, bloom, new VignetteEffect({ darkness: 0.42, offset: 0.32 }), tone));
-    composer.addPass(new EffectPass(this.camera, new SMAAEffect()));
-    this.composer = composer;
-  }
-
   /* ------------------------------ per-frame state */
   private beatAt(p: number) {
     const x = clamp01(p) * (this.ids.length - 1);
@@ -2020,32 +2022,51 @@ export class DeltaWorld {
 
   private apply(p: number, time: number) {
     const { i, f, x } = this.beatAt(p);
-    // hold at each key, then glide: the target slides across the ground while the camera keeps
-    // orbiting it, pulling back and rising a little on long moves, so every frame looks at something
-    const e = smoother(0.1, 0.9, f);
+    // The camera flows through every key without stopping: target, distance, bearing and height
+    // follow a soft Hermite spline, so motion is continuous like a film. On long moves it pulls
+    // back and rises a little, so it never skims through trees or roofs.
+    const e = smooth(0, 1, f);
     const a = KEYS[this.ids[i]] ?? KEYS.intro;
     const b = KEYS[this.ids[i + 1]] ?? KEYS.intro;
-    const tgt = this.tmp2.lerpVectors(a.t, b.t, e);
-    const travel = a.t.distanceTo(b.t);
-    const hop = Math.sin(Math.PI * e);
-    const orbitA = (a.orbit ?? 0) * Math.sin(time * 0.05);
-    const orbitB = (b.orbit ?? 0) * Math.sin(time * 0.05);
-    const bA = a.b + orbitA;
-    const bB = bA + wrapDeg(b.b + orbitB - bA);
-    const sway = Math.sin(time * 0.07) * 1.6 * (1 - hop);
-    const bear = THREE.MathUtils.degToRad(lerp(bA, bB, e) + sway);
-    const elev = THREE.MathUtils.degToRad(lerp(a.e, b.e, e) + hop * 9 * clamp01(travel / 60));
-    const dist = Math.exp(lerp(Math.log(a.d), Math.log(b.d), e)) + travel * 0.3 * hop;
+    const n = this.camKeys.length;
+    const K = (j: number) => this.camKeys[Math.max(0, Math.min(n - 1, j))];
+    const k0 = K(i - 1);
+    const k1 = K(i);
+    const k2 = K(i + 1);
+    const k3 = K(i + 2);
+    const f2 = f * f;
+    const f3 = f2 * f;
+    const h00 = 2 * f3 - 3 * f2 + 1;
+    const h10 = f3 - 2 * f2 + f;
+    const h01 = -2 * f3 + 3 * f2;
+    const h11 = f3 - f2;
+    const T = 0.32; // tangent strength: lower = less overshoot between distant keys
+    const herm = (p0: number, p1: number, p2: number, p3: number) => h00 * p1 + h10 * T * (p2 - p0) + h01 * p2 + h11 * T * (p3 - p1);
+    const tgt = this.tmp2.set(herm(k0.t.x, k1.t.x, k2.t.x, k3.t.x), herm(k0.t.y, k1.t.y, k2.t.y, k3.t.y), herm(k0.t.z, k1.t.z, k2.t.z, k3.t.z));
+    const travel = k1.t.distanceTo(k2.t);
+    const hop = Math.sin(Math.PI * f) ** 2;
+    // the opening view drifts round the delta; the drift fades out as the story starts
+    const orbit = 24 * Math.sin(time * 0.05) * (1 - smooth(0, 1, x));
+    const sway = Math.sin(time * 0.07) * 1.4;
+    const bear = THREE.MathUtils.degToRad(herm(k0.b, k1.b, k2.b, k3.b) + orbit + sway);
+    const elev = THREE.MathUtils.degToRad(Math.max(3, herm(k0.e, k1.e, k2.e, k3.e) + hop * 8 * clamp01(travel / 60)));
+    const dist = Math.exp(herm(k0.ld, k1.ld, k2.ld, k3.ld)) * (1 + Math.sin(time * 0.11) * 0.015) + travel * 0.26 * hop;
     const pos = this.tmp.set(Math.sin(bear) * Math.cos(elev), Math.sin(elev), Math.cos(bear) * Math.cos(elev)).multiplyScalar(dist).add(tgt);
     pos.y = Math.max(pos.y, 1.4 + hop * Math.min(16, travel * 0.22));
-    // breathing, like a camera on a crane
-    pos.y += Math.sin(time * 0.23) * 0.06 * Math.min(1, dist / 10);
     this.camera.position.copy(pos);
     // leave room for the story on the left on wide screens
     const fwd = tgt.clone().sub(pos).normalize();
     const right = fwd.clone().cross(V(0, 1, 0)).normalize();
     const shift = (this.aspect > 1.1 ? lerp(a.s ?? 0.2, b.s ?? 0.2, e) : 0) * this.frameShift * dist;
     this.camera.lookAt(tgt.clone().addScaledVector(right, -shift));
+    // small things only cast shadows in close shots, where they can be seen
+    const wantSmall = dist < (this.high ? 70 : 40);
+    if (wantSmall !== this.smallShadows) {
+      this.smallShadows = wantSmall;
+      this.smallCasters.forEach((o) => (o.castShadow = wantSmall));
+    }
+    const orbitA = i === 0 ? orbit : 0;
+    const orbitB = 0;
 
     // sun through the day: three-quarter light from the view unless a key fixes it
     const sunElev = lerp(a.sun, b.sun, e);
@@ -2066,12 +2087,6 @@ export class DeltaWorld {
       sc.bottom = -span;
       sc.updateProjectionMatrix();
     }
-    if (this.dof) {
-      this.dof.cocMaterial.worldFocusDistance = dist;
-      this.dof.cocMaterial.worldFocusRange = Math.max(6, dist * 0.9);
-      this.dof.bokehScale = lerp(a.dof, b.dof, e) * 3.2;
-    }
-
     // season: paddy grows, ripens, then is harvested
     const L = (id: string) => this.local(id, x);
     const grow = clamp01(smooth(0, 1, L('grow')) * 0.5 + smooth(0, 1, L('grow2')) * 0.5);
@@ -2135,6 +2150,14 @@ export class DeltaWorld {
       const filled = x < this.ids.indexOf('harvest') + 0.3 ? 0 : 1;
       const gone = smooth(k / 42, k / 42 + 0.2, clamp01(dispatchL));
       s.scale.setScalar(Math.max(0.001, filled * smooth(0, 0.8, L('harvest') + (collectL > 0 ? 1 : 0)) * (1 - gone)));
+    });
+
+    this.sackSets.forEach(({ im, marks }) => {
+      marks.forEach((mk, k) => {
+        mk.updateMatrix();
+        im.setMatrixAt(k, mk.matrix);
+      });
+      im.instanceMatrix.needsUpdate = true;
     });
 
     // vehicles
@@ -2217,12 +2240,13 @@ export class DeltaWorld {
     const gr = L('grow');
     this.drone.visible = gr > 0 && gr < 1.1;
     if (this.drone.visible) this.drone.position.set(lerp(70, 96, gr), 5 + Math.sin(time * 2) * 0.15, lerp(40, 50, gr));
-    if (this.water) this.water.material.uniforms.time.value = time * 0.6;
+    if (this.waterTex) this.waterTex.offset.set(time * 0.004, time * 0.011);
   }
 
   /* ------------------------------ public API */
   setProgress(p: number) {
     this.target = clamp01(p);
+    this.lastInput = performance.now();
   }
 
   screen(anchor: string, out: { x: number; y: number; visible: boolean }) {
@@ -2239,16 +2263,34 @@ export class DeltaWorld {
     return out;
   }
 
-  resize() {
+  resize(force = false) {
     const el = this.renderer.domElement;
     const w = el.clientWidth || window.innerWidth;
     const h = el.clientHeight || window.innerHeight;
+    // resizing the canvas clears it, so skip when nothing changed (mobile address bars fire resize often)
+    if (!force && w === this.size.w && h === this.size.h) return;
+    this.size = { w, h };
+    this.renderer.setPixelRatio(this.dpr);
     this.renderer.setSize(w, h, false);
     this.aspect = w / h;
     this.camera.aspect = w / h;
     this.camera.fov = w / h < 0.8 ? 55 : w / h < 1.2 ? 44 : 36;
     this.camera.updateProjectionMatrix();
-    this.composer?.setSize(w, h);
+    if (this.running) this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Drops the resolution a step when frames run long, so motion stays smooth on any device. */
+  private adapt(dt: number) {
+    this.frameTimes.push(dt);
+    if (this.frameTimes.length < 40) return;
+    const avg = this.frameTimes.reduce((s, v) => s + v, 0) / this.frameTimes.length;
+    this.frameTimes = [];
+    if (avg > 1 / 48 && this.dpr > this.dprMin) {
+      this.dpr = Math.max(this.dprMin, this.dpr - 0.15);
+      this.resize(true);
+      // resizing clears the canvas: draw again at once so no blank frame is shown
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 
   setVisible(v: boolean) {
@@ -2258,8 +2300,7 @@ export class DeltaWorld {
   renderOnce() {
     const t = this.clock.getElapsedTime();
     this.apply(this.progress, t);
-    if (this.composer) this.composer.render();
-    else this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this.scene, this.camera);
   }
 
   start() {
@@ -2272,12 +2313,16 @@ export class DeltaWorld {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
       if (!this.visible) return;
-      // critically damped spring: the camera eases into and out of every move
-      const k = 3.4;
-      this.vel += ((this.target - this.progress) * k * k - 2 * k * this.vel) * dt;
+      // when the reader stops scrolling, the camera settles on the nearest shot
+      const steps = this.ids.length - 1;
+      const goal = !this.snapMode && now - this.lastInput > 420 ? Math.round(this.target * steps) / steps : this.target;
+      // critically damped spring: quick to follow the scroll, never overshooting
+      const k = 6.5;
+      this.vel += ((goal - this.progress) * k * k - 2 * k * this.vel) * dt;
       this.progress += this.vel * dt;
-      if (Math.abs(this.target - this.progress) < 1e-5 && Math.abs(this.vel) < 1e-5) this.progress = this.target;
+      if (Math.abs(goal - this.progress) < 1e-5 && Math.abs(this.vel) < 1e-5) this.progress = goal;
       this.renderOnce();
+      this.adapt(dt);
       this.opts.onFrame?.(this);
     };
     this.raf = requestAnimationFrame(loop);
@@ -2296,7 +2341,6 @@ export class DeltaWorld {
     });
     mats.forEach((m) => m.dispose());
     mats.clear();
-    this.composer?.dispose();
     this.envRT?.dispose();
     this.pmrem.dispose();
     this.renderer.dispose();

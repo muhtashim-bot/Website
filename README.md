@@ -110,3 +110,13 @@ Nothing on the site is invented, but several items are carried over as published
 - [ ] Add analytics (journey chapter reach, app-store clicks, enquiries, hotline taps, report downloads).
 - [ ] Bangla version: copy is centralised in `src/content`, so a `bn` copy of those files plus a locale switch is the main work.
 - [ ] Move `src/content` into a headless CMS (Sanity, Payload or Strapi) when the content team is ready.
+
+### Performance notes (3D story)
+
+- No post-processing: the renderer uses MSAA and ACES tone mapping; the vignette is a CSS overlay.
+- The river is a reflective material, not a mirror (a mirror re-renders the scene every frame).
+- The sky environment map is rendered once at load; re-rendering it while scrolling caused hitches.
+- Rice, distant trees and small objects in wide shots cast no shadows; people are merged into a few meshes each; sacks are instanced.
+- Resolution drops a step automatically if frames run slower than about 48 fps (see `adapt()` in `src/three/delta.ts`).
+- Avoid `backdrop-filter` on anything over the canvas: it makes the browser re-read the WebGL canvas every frame.
+- `?debug` exposes the world as `window.__world` (draw calls: `__world.renderer.info.render`).

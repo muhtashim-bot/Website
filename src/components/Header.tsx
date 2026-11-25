@@ -32,7 +32,7 @@ export function Header() {
   }, [floating]);
   const dark = floating && overStory && !mobile;
   const pill = dark
-    ? 'bg-[rgba(2,36,40,0.58)] text-white ring-1 ring-white/15 shadow-[0_12px_40px_-16px_rgba(0,0,0,0.5)] backdrop-blur-xl'
+    ? 'bg-[rgba(2,36,40,0.74)] text-white ring-1 ring-white/15 shadow-[0_12px_40px_-16px_rgba(0,0,0,0.5)]'
     : 'bg-white/85 text-ink ring-1 ring-ink/[0.08] shadow-[0_12px_40px_-18px_rgba(2,43,54,0.35)] backdrop-blur-xl';
   const linkHover = dark ? 'hover:bg-white/15' : 'hover:bg-leaf-50 hover:text-field';
 

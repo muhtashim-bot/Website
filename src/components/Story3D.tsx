@@ -7,11 +7,11 @@ import { intro, outro, scenes } from '@/content/journey';
 import { metrics, headlineMetrics, METRICS_AS_OF } from '@/content/metrics';
 import { Channels, JourneyStatic } from './Journey';
 import { Phone } from './PhoneScreens';
-import { ServiceLoop } from './ServiceLoop';
+import { ServiceWheel } from './ServiceWheel';
 import type { DeltaWorld } from '@/three/delta';
 
 const N = beats.length;
-const BEAT_VH = 72;
+const BEAT_VH = 46;
 const anchorFor: Record<string, string> = {
   apply: 'home',
   fund: 'town',
@@ -63,6 +63,7 @@ function Story3DInner() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelRef = useRef<HTMLDivElement>(null);
   const pinRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const widths = useRef(new WeakMap<HTMLElement, number>());
   const worldRef = useRef<DeltaWorld | null>(null);
   const beatRef = useRef(0);
   const [beat, setBeat] = useState(0);
@@ -113,11 +114,18 @@ function Story3DInner() {
               if (!pe) return;
               w.screen(pin.anchor, pos);
               const vw = w.renderer.domElement.clientWidth;
-              const covered = vw >= 1024 && pos.x < vw * 0.49;
+              const vh = w.renderer.domElement.clientHeight;
+              // desktop: the left panel covers the left half; phones: the wheel covers the lower half
+              const covered = vw >= 1024 ? pos.x < vw * 0.49 : pos.y > vh * 0.5;
               const show = pinFade > 0.01 && pos.visible && !covered && pos.y > 90;
               pe.style.opacity = show ? String(pinFade) : '0';
               if (show) {
-                const half = pe.offsetWidth / 2;
+                let pw = widths.current.get(pe);
+                if (pw === undefined) {
+                  pw = pe.offsetWidth;
+                  widths.current.set(pe, pw);
+                }
+                const half = pw / 2;
                 const px = Math.min(Math.max(pos.x, half + 8), vw - half - 8);
                 pe.style.transform = `translate3d(${px}px, ${pos.y}px, 0) translate(-50%, -100%)`;
               }
@@ -133,7 +141,12 @@ function Story3DInner() {
             w.screen(a, pos);
             const fade = 1 - Math.min(1, Math.abs(local) * 2.6);
             el.style.opacity = pos.visible ? String(Math.max(0, fade)) : '0';
-            const half = el.offsetWidth / 2;
+            let lw = widths.current.get(el);
+            if (lw === undefined) {
+              lw = el.offsetWidth;
+              widths.current.set(el, lw);
+            }
+            const half = lw / 2;
             const vw = w.renderer.domElement.clientWidth;
             const px = Math.min(Math.max(pos.x, half + 12), vw - half - 12);
             const py = Math.max(pos.y, 150);
@@ -142,6 +155,7 @@ function Story3DInner() {
         },
       );
       worldRef.current = world;
+      if (new URLSearchParams(window.location.search).has('debug')) (window as unknown as { __world: DeltaWorld }).__world = world;
       world.setProgress(read());
       world.progress = world.target;
       world.start();
@@ -170,6 +184,10 @@ function Story3DInner() {
     const total = section.offsetHeight - window.innerHeight;
     window.scrollTo({ top: top + (k / (N - 1)) * total, behavior: 'smooth' });
   }, []);
+
+  useEffect(() => {
+    if (labelRef.current) widths.current.delete(labelRef.current);
+  }, [beat]);
 
   const b = beats[beat];
   const scene = sceneById(b.scene);
@@ -206,6 +224,9 @@ function Story3DInner() {
           </div>
         ))}
 
+        {/* lens vignette */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-[4] bg-[radial-gradient(120%_90%_at_60%_45%,transparent_55%,rgba(2,24,28,0.38))]" />
+
         {/* bottom shade for the story titles */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-[46%] bg-gradient-to-t from-[rgba(2,30,36,0.82)] via-[rgba(2,30,36,0.35)] to-transparent" />
 
@@ -214,18 +235,19 @@ function Story3DInner() {
           <div className="flex h-full items-center gap-7 pl-10 pr-14 xl:gap-10 xl:pl-14">
             <div className="min-w-0 flex-1">
               {isIntro ? (
-                <div className="lower-third max-w-[38rem]">
-                  <h1 className="text-[clamp(2.4rem,3.9vw,3.8rem)] font-bold leading-[1.03] tracking-[-0.035em] text-ink">{intro.title}</h1>
-                  <p className="mt-4 max-w-[32rem] text-[1.08rem] leading-relaxed text-ink-soft">{intro.body}</p>
-                  <p className="mt-7 text-[0.95rem] font-bold text-field">Every service, from financing to payout</p>
-                  <div className="mt-3">
-                    <ServiceLoop onPick={goTo} />
+                <div className="lower-third flex flex-col items-center">
+                  <div className="w-[min(62vh,calc(47vw-140px),600px)]">
+                    <ServiceWheel onPick={goTo}>
+                      <h1 className="text-[clamp(1.5rem,2.35vw,2.3rem)] font-bold leading-[1.06] tracking-[-0.03em] text-ink">{intro.title}</h1>
+                      <p className="mt-2.5 text-[clamp(0.78rem,0.95vw,0.92rem)] font-bold leading-snug text-field">Every service, from financing to payout</p>
+                    </ServiceWheel>
                   </div>
-                  <div className="mt-7 flex flex-wrap items-center gap-3">
+                  <p className="mt-6 max-w-[30rem] text-center text-[1rem] leading-relaxed text-ink-soft">{intro.body}</p>
+                  <div className="mt-5 flex flex-wrap justify-center gap-3">
                     <button type="button" onClick={() => goTo('finance')} className="btn-primary">
                       Follow a season
                     </button>
-                    <Link href="#paths" className="btn-ghost bg-white/60">
+                    <Link href="#paths" className="btn-ghost bg-white/70">
                       Find your path
                     </Link>
                   </div>
@@ -283,13 +305,13 @@ function Story3DInner() {
         {/* ---------- story titles over the world ---------- */}
         <div className="absolute inset-x-0 bottom-0 z-20 p-5 pb-7 text-white lg:left-[47%] lg:p-10 lg:pb-12">
           {isIntro && (
-            <div className="lower-third max-w-[34rem] lg:hidden">
-              <h1 className="text-[2.15rem] font-bold leading-[1.05] tracking-tight text-white">{intro.title}</h1>
-              <p className="mt-2.5 text-[0.95rem] text-white/85">{intro.body}</p>
-              <p className="mt-4 text-sm font-bold text-lime">Every service, from financing to payout</p>
-              <div className="mt-2">
-                <ServiceLoop onPick={goTo} compact />
-              </div>
+            <div className="lower-third mx-auto max-w-[24rem] lg:hidden">
+              <ServiceWheel onPick={goTo} compact dark>
+                <div className="flex aspect-square w-full flex-col items-center justify-center rounded-full bg-[rgba(2,30,36,0.55)] px-4">
+                  <h1 className="max-w-[10.5rem] text-[1.08rem] font-bold leading-[1.1] tracking-tight text-white">{intro.title}</h1>
+                  <p className="mt-1.5 max-w-[10rem] text-[0.64rem] font-bold leading-snug text-lime">Every service, from financing to payout</p>
+                </div>
+              </ServiceWheel>
             </div>
           )}
           {!isIntro && !isOutro && scene && (

@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Walkthrough as W } from '@/content/offerings';
 import { Phone } from './PhoneScreens';
 
-const STEP_VH = 85;
+const STEP_VH = 52;
 
 export function Walkthrough({ name, data }: { name: string; data: W }) {
   const ref = useRef<HTMLElement>(null);
@@ -72,7 +72,7 @@ export function Walkthrough({ name, data }: { name: string; data: W }) {
 
   const step = data.steps[k];
   return (
-    <section ref={ref} aria-labelledby="walk-title" className="relative bg-[#FFFDF5]" style={{ height: `calc(${n * STEP_VH}svh + 30svh)` }}>
+    <section ref={ref} aria-labelledby="walk-title" className="relative bg-[#FFFDF5]" style={{ height: `calc(${n * STEP_VH}svh + 45svh)` }}>
       <div className="sticky top-[var(--header-h)] h-[calc(100svh-var(--header-h))] overflow-hidden">
         <div aria-hidden className="furrows pointer-events-none absolute inset-0 opacity-40 [mask-image:radial-gradient(60%_70%_at_70%_50%,black,transparent)]" />
         <div className="container relative grid h-full grid-rows-[auto_1fr] gap-4 py-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:grid-rows-1 lg:items-center lg:gap-12 lg:py-10">
@@ -88,7 +88,7 @@ export function Walkthrough({ name, data }: { name: string; data: W }) {
             </p>
             <ol className="relative mt-3 lg:mt-4">
               <span aria-hidden className="absolute bottom-3 left-[9px] top-3 hidden w-[3px] overflow-hidden rounded-full bg-ink/10 lg:block">
-                <span className="block w-full rounded-full bg-leaf transition-[height] duration-700 ease-out" style={{ height: `${(k / Math.max(1, n - 1)) * 100}%` }} />
+                <span className="block w-full rounded-full bg-leaf transition-[height] duration-300 ease-out" style={{ height: `${(k / Math.max(1, n - 1)) * 100}%` }} />
               </span>
               {data.steps.map((s, i) => {
                 const placed = i <= k;
@@ -108,7 +108,7 @@ export function Walkthrough({ name, data }: { name: string; data: W }) {
                     <button type="button" onClick={() => jump(i)} className="text-left">
                       <h3 className={`font-bold leading-snug tracking-tight transition-colors ${on ? 'text-[1.35rem] text-ink lg:text-[1.55rem]' : 'text-[1.05rem] text-ink-soft hover:text-field'}`}>{s.title}</h3>
                     </button>
-                    <div className={`wt-body grid transition-[grid-template-rows] duration-500 ease-out ${on ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                    <div className={`wt-body grid transition-[grid-template-rows] duration-300 ease-out ${on ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
                       <p className="overflow-hidden pb-1 text-[1.02rem] leading-relaxed text-ink-soft lg:max-w-[30rem]">
                         <span className="block pt-2">{s.body}</span>
                       </p>
@@ -122,7 +122,7 @@ export function Walkthrough({ name, data }: { name: string; data: W }) {
 
           {/* the phone, with callouts */}
           <div className="relative order-1 flex min-h-0 items-center justify-center lg:order-2">
-            <div className="relative h-[42svh] lg:h-[min(620px,calc(100svh-var(--header-h)-80px))]">
+            <div className="relative h-[48svh] lg:h-[min(620px,calc(100svh-var(--header-h)-80px))]">
               <div className="relative mx-auto h-full aspect-[300/632]">
                 <Phone screen={step.screen} className="h-full !w-auto" />
                 {(step.callouts ?? []).map((c, j) => (
@@ -131,7 +131,7 @@ export function Walkthrough({ name, data }: { name: string; data: W }) {
                     className={`wt-callout absolute z-10 hidden whitespace-nowrap rounded-full bg-white px-4 py-2 text-[0.92rem] font-bold text-ink shadow-[0_16px_40px_-18px_rgba(2,43,54,0.55)] ring-1 ring-ink/[0.06] sm:flex sm:items-center sm:gap-2 ${
                       j % 2 === 0 ? 'right-[88%] top-[22%]' : 'left-[88%] top-[58%]'
                     }`}
-                    style={{ animationDelay: `${0.25 + j * 0.18}s` }}
+                    style={{ animationDelay: `${0.06 + j * 0.08}s` }}
                   >
                     <span className="h-2 w-2 rounded-full bg-leaf ring-4 ring-leaf/25" aria-hidden />
                     {c}
