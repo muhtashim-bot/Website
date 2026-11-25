@@ -1,0 +1,33 @@
+{
+  "name": "ifarmer-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "npx serve@14 out -l 3000",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@fontsource/quicksand": "^5.3.0",
+    "@types/three": "^0.170.0",
+    "n8ao": "^2.1.0",
+    "next": "^15.5.29",
+    "postprocessing": "^6.39.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.7",
+    "@types/react": "^19.3.1",
+    "@types/react-dom": "^19.3.0",
+    "autoprefixer": "^10.7.0",
+    "postcss": "^8.5.33",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
+}

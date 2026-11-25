@@ -1,0 +1,90 @@
+@import '@fontsource/quicksand/400.css';
+@import '@fontsource/quicksand/500.css';
+@import '@fontsource/quicksand/600.css';
+@import '@fontsource/quicksand/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --header-h: 72px;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: calc(var(--header-h) + 16px);
+  }
+  body {
+    @apply bg-[#FFFDF5] font-sans text-ink antialiased;
+    font-feature-settings: 'ss01';
+  }
+  h1, h2, h3, h4 {
+    @apply font-bold text-ink;
+    text-wrap: balance;
+  }
+  p { text-wrap: pretty; }
+  ::selection { background: #ddff80; color: #1b2a1f; }
+  :focus-visible {
+    outline: 3px solid #038f2f;
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-[0.98rem] font-bold transition-colors duration-200;
+  }
+  .btn-primary { @apply btn bg-field text-white hover:bg-field-700; }
+  .btn-lime { @apply btn bg-lime text-ink hover:bg-leaf; }
+  .btn-ghost { @apply btn border-2 border-ink/15 text-ink hover:border-field hover:text-field; }
+  .btn-on-dark { @apply btn border-2 border-white/30 text-white hover:border-lime hover:text-lime; }
+  .link { @apply font-semibold text-field underline decoration-2 underline-offset-4 decoration-leaf/50 hover:decoration-field; }
+  .kicker { @apply text-[0.95rem] font-semibold text-field; }
+  .card { @apply rounded-[1.75rem] bg-white p-7 ring-1 ring-ink/[0.07]; }
+  .prose-ifarmer p { @apply mb-4 text-lead text-ink-soft; }
+}
+
+/* Paddy furrows: the one decorative texture, used sparingly behind section edges. */
+.furrows {
+  background-image: repeating-linear-gradient(
+    -8deg,
+    rgba(136, 187, 65, 0.16) 0 2px,
+    transparent 2px 22px
+  );
+}
+
+/* film grain for the cinematic stage */
+.grain {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+@keyframes lowerThird {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.lower-third { animation: lowerThird 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.thread-open { animation: lowerThird 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+.screen-in { animation: screenIn 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.hero-rise { animation: lowerThird 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+@keyframes kenburns {
+  from { transform: scale(1.02) translate3d(0, 0, 0); }
+  to { transform: scale(1.12) translate3d(-1.5%, -1%, 0); }
+}
+.kenburns { animation: kenburns 14s ease-in-out infinite alternate; }
+.kenburns-slow { animation: kenburns 26s ease-in-out infinite alternate; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
