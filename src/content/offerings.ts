@@ -8,6 +8,9 @@ export type Item = { title: string; body: string; status?: Status; href?: string
 export type FAQ = { q: string; a: string };
 export type Module = { title: string; body: string; href: string; linkLabel: string };
 export type Block = { title: string; intro?: string; items: Item[]; layout?: 'grid' | 'list' | 'steps' };
+/** A step of the scrolling phone walkthrough on solution pages. `screen` is a PhoneScreens key. */
+export type WalkStep = { title: string; body: string; screen: string; callouts?: string[] };
+export type Walkthrough = { title: string; steps: WalkStep[] };
 
 export type Page = {
   slug: string;
@@ -20,6 +23,7 @@ export type Page = {
   photo: string; // /public/photos/<photo>-1920.jpg
   channels: ChannelKey[]; // apps, places and partners that deliver this
   metrics?: MetricId[];
+  walkthrough?: Walkthrough;
   blocks: Block[];
   module?: Module; // AI & Data cross-link module (AI brief, section 9)
   stores?: { android?: string; ios?: string };
@@ -313,6 +317,15 @@ export const products: Page[] = [
     intro: 'Folon is the farmer’s all-in-one digital partner: crop advice in text and audio, chat with agri experts, a farmer community, and simple loan applications.',
     photo: 'farmer-phone',
     channels: ['folon', 'folonAI'],
+    walkthrough: {
+      title: 'From a question in the field to a loan in hand',
+      steps: [
+        { title: 'Ask about your crop', body: 'Type, speak or send a photo in Bangla. Folon-AI answers from advice our agronomists have reviewed, and hands hard cases to a person.', screen: 'folonai-ask', callouts: ['Text, voice or photo', 'Agronomist follow-up'] },
+        { title: 'Get this week’s advice', body: 'Weather alerts, fertilizer timing and pest watch for your crop, to read or listen to.', screen: 'folon-advice', callouts: ['Weather alerts', 'Listen in Bangla'] },
+        { title: 'Apply for crop finance', body: 'Tell us your crop, your land and what you need. No collateral, and a facilitator can help you apply.', screen: 'folon-apply', callouts: ['No collateral', 'Repay at harvest'] },
+        { title: 'Follow it to approval', body: 'See each step until the money reaches you, then buy your inputs at a KriShop partner shop.', screen: 'folon-approved', callouts: ['Funds sent to you'] },
+      ],
+    },
     blocks: [
       {
         title: 'What farmers can do in Folon',
@@ -348,6 +361,14 @@ export const products: Page[] = [
     intro: 'Field facilitators and partner retailers use Sofol to register farmers, complete e-KYC and keep farm records up to date. It is how iFarmer combines people, phones and remote sensing to serve smallholders at low cost.',
     photo: 'farmer-meeting',
     channels: ['sofol', 'center'],
+    walkthrough: {
+      title: 'How a facilitator brings a farmer in',
+      steps: [
+        { title: 'Register the farmer', body: 'Scan the national ID card. e-KYC checks it in real time.', screen: 'sofol-register', callouts: ['NID scan', 'e-KYC in real time'] },
+        { title: 'Build the farmer profile', body: 'Household, land and crops go into one record, so every service fits the farmer.', screen: 'sofol-profile', callouts: ['One profile', 'Every service'] },
+        { title: 'Keep the record current', body: 'Farm visits, photos and transactions keep the profile up to date for monitoring.', screen: 'sofol-visits', callouts: ['Farm visits', 'Crop stage'] },
+      ],
+    },
     blocks: [
       {
         title: 'What Sofol does',
@@ -381,6 +402,15 @@ export const products: Page[] = [
     photo: 'krishop-counter',
     channels: ['krishop', 'card'],
     metrics: ['registeredRetailers'],
+    walkthrough: {
+      title: 'How a village shop runs on KriShop',
+      steps: [
+        { title: 'Order inputs on demand', body: 'Quality seed, fertilizer and crop protection at competitive prices, ordered from the counter.', screen: 'krishop-order', callouts: ['Quality inputs', 'Pay with bKash'] },
+        { title: 'Buy now, pay later', body: 'Input credit with an instant decision and 30 to 90 days to repay.', screen: 'krishop-credit', callouts: ['Instant decision', '30 to 90 days'] },
+        { title: 'Delivered to your shop', body: 'We confirm the order and track it to your door.', screen: 'krishop-delivery', callouts: ['Tracked delivery'] },
+        { title: 'Keep your books in Lenden', body: 'A digital ledger for daily sales that works offline and reminds customers about unpaid balances by SMS.', screen: 'krishop-ledger', callouts: ['Works offline', 'SMS reminders'] },
+      ],
+    },
     blocks: [
       {
         title: 'Built for the village shop',
@@ -414,6 +444,14 @@ export const products: Page[] = [
     intro: 'iHarvst connects funders with farming projects managed by farmers and supported by iFarmer, with insurance to reduce risk and full digital visibility.',
     photo: 'maize-harvest',
     channels: ['iharvst'],
+    walkthrough: {
+      title: 'Back a farm and follow it to harvest',
+      steps: [
+        { title: 'Choose a farm', body: 'Browse vetted, insured projects in All Farms, with Shariah-compliant options.', screen: 'iharvst-fund', callouts: ['Insured', 'Shariah option'] },
+        { title: 'Follow the season', body: 'Updates and photos from the iFarmer team as the crop grows.', screen: 'iharvst-updates', callouts: ['Season updates'] },
+        { title: 'Share the returns', body: 'After harvest and sale, the loan is repaid and returns are shared between you and the farmer.', screen: 'iharvst-returns', callouts: ['Returns shared'] },
+      ],
+    },
     blocks: [
       {
         title: 'How funding works',
@@ -451,6 +489,14 @@ export const products: Page[] = [
     intro: 'Supplier Connect links iFarmer directly with its network of suppliers, with clear buyer orders and rates, smooth communication and efficient fulfilment.',
     photo: 'collection-center',
     channels: ['supplier', 'center'],
+    walkthrough: {
+      title: 'From a supplier’s stock to a buyer’s order',
+      steps: [
+        { title: 'Share what is ready', body: 'Crop, quantity, grade, price and the date it is ready, in real time.', screen: 'supplier-share', callouts: ['Quantity and grade', 'Your price'] },
+        { title: 'See buyer orders', body: 'Institutional buyers’ requirements, quality standards and payment schedules, in one place.', screen: 'supplier-orders', callouts: ['Quality standard', 'Payment schedule'] },
+        { title: 'Deliver and get paid', body: 'Produce is collected, quality checked and dispatched, and payment follows the schedule.', screen: 'supplier-dispatch', callouts: ['Quality checked', 'Payment released'] },
+      ],
+    },
     blocks: [
       {
         title: 'What suppliers and iFarmer share',
@@ -484,6 +530,14 @@ export const products: Page[] = [
     photo: 'ifarmer-center-front',
     channels: ['center', 'sofol', 'krishop'],
     metrics: ['centers'],
+    walkthrough: {
+      title: 'One visit, every service',
+      steps: [
+        { title: 'Walk in and register', body: 'Our team registers you once with your national ID.', screen: 'sofol-register', callouts: ['Registered once'] },
+        { title: 'Get finance and inputs', body: 'Apply for a loan and pick up quality inputs at the same counter.', screen: 'folon-apply', callouts: ['No collateral', 'Repay at harvest'] },
+        { title: 'Sell your harvest', body: 'Bring your produce in. We check quality, connect you with buyers and settle your loan from the sale.', screen: 'folon-paid', callouts: ['Paid at harvest'] },
+      ],
+    },
     blocks: [
       {
         title: 'At any iFarmer Center',
@@ -515,6 +569,13 @@ export const products: Page[] = [
     photo: 'experience-center',
     channels: ['experience', 'card'],
     metrics: ['experienceCenters'],
+    walkthrough: {
+      title: 'Try it, then pay over time',
+      steps: [
+        { title: 'Find the right machine', body: 'Power tillers, reapers and sprayers from several brands. Book a demo and try one at the center.', screen: 'machine-catalog', callouts: ['Several brands', 'Hands-on demo'] },
+        { title: 'Pay in instalments', body: 'Spread the cost over 4 to 12 months, with training and after-sales service included.', screen: 'machine-emi', callouts: ['4 to 12 months', 'Training included'] },
+      ],
+    },
     blocks: [
       {
         title: 'What you will find',

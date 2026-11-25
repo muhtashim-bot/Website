@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { nav } from '@/content/nav';
 import { HOTLINE, HOTLINE_TEL } from '@/content/offerings';
@@ -11,6 +12,29 @@ export function Header() {
   const [mobile, setMobile] = useState(false);
   const [mobileGroup, setMobileGroup] = useState<string | null>(null);
   const ref = useRef<HTMLElement>(null);
+  // On the homepage the header floats over the 3D story: no panel, just glass pills.
+  const floating = usePathname() === '/';
+  const [overStory, setOverStory] = useState(true);
+  useEffect(() => {
+    if (!floating) return;
+    const story = document.getElementById('how-it-works');
+    const check = () => {
+      const r = story?.getBoundingClientRect();
+      setOverStory(!!r && r.bottom > 80);
+    };
+    check();
+    window.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check);
+    return () => {
+      window.removeEventListener('scroll', check);
+      window.removeEventListener('resize', check);
+    };
+  }, [floating]);
+  const dark = floating && overStory && !mobile;
+  const pill = dark
+    ? 'bg-[rgba(2,36,40,0.58)] text-white ring-1 ring-white/15 shadow-[0_12px_40px_-16px_rgba(0,0,0,0.5)] backdrop-blur-xl'
+    : 'bg-white/85 text-ink ring-1 ring-ink/[0.08] shadow-[0_12px_40px_-18px_rgba(2,43,54,0.35)] backdrop-blur-xl';
+  const linkHover = dark ? 'hover:bg-white/15' : 'hover:bg-leaf-50 hover:text-field';
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -35,18 +59,25 @@ export function Header() {
   }, [mobile]);
 
   return (
-    <header ref={ref} className="sticky top-0 z-50 border-b border-ink/[0.06] bg-[#FFFDF5]/90 backdrop-blur-md">
-      <div className="container flex h-[var(--header-h)] items-center gap-6">
-        <Link href="/" className="shrink-0" aria-label="iFarmer home">
-          <Logo className="h-9 w-auto" />
+    <header
+      ref={ref}
+      className={floating ? 'fixed inset-x-0 top-0 z-50' : 'sticky top-0 z-50 border-b border-ink/[0.06] bg-[#FFFDF5]/90 backdrop-blur-md'}
+    >
+      <div className={`container relative z-10 flex h-[var(--header-h)] items-center gap-6 ${floating ? 'pt-3' : ''}`}>
+        <Link
+          href="/"
+          className={`shrink-0 ${floating ? `rounded-full px-4 py-1.5 transition-colors duration-300 ${pill}` : ''}`}
+          aria-label="iFarmer home"
+        >
+          <Logo className={floating ? 'h-8 w-auto' : 'h-9 w-auto'} tone={dark ? 'white' : 'green'} />
         </Link>
 
         <nav aria-label="Main" className="ml-auto hidden lg:block">
-          <ul className="flex items-center gap-1">
+          <ul className={`flex items-center gap-1 ${floating ? `rounded-full p-1 transition-colors duration-300 ${pill}` : ''}`}>
             {nav.map((g) =>
               g.href ? (
                 <li key={g.label}>
-                  <Link href={g.href} className="rounded-full px-3.5 py-2 text-[0.97rem] font-semibold text-ink hover:bg-leaf-50 hover:text-field">
+                  <Link href={g.href} className={`block rounded-full px-3.5 py-2 text-[0.97rem] font-semibold ${floating ? linkHover : 'text-ink hover:bg-leaf-50 hover:text-field'}`}>
                     {g.label}
                   </Link>
                 </li>
@@ -59,7 +90,9 @@ export function Header() {
                       e.stopPropagation();
                       setOpen(open === g.label ? null : g.label);
                     }}
-                    className={`flex items-center gap-1 rounded-full px-3.5 py-2 text-[0.97rem] font-semibold ${open === g.label ? 'bg-leaf-50 text-field' : 'text-ink hover:bg-leaf-50 hover:text-field'}`}
+                    className={`flex items-center gap-1 rounded-full px-3.5 py-2 text-[0.97rem] font-semibold ${
+                      open === g.label ? (dark ? 'bg-white/20' : 'bg-leaf-50 text-field') : floating ? linkHover : 'text-ink hover:bg-leaf-50 hover:text-field'
+                    }`}
                   >
                     {g.label}
                     <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden className={`transition-transform ${open === g.label ? 'rotate-180' : ''}`}>
@@ -87,17 +120,21 @@ export function Header() {
         </nav>
 
         <div className="ml-auto hidden items-center gap-3 lg:ml-2 lg:flex">
-          <a href={HOTLINE_TEL} className="hidden text-sm font-semibold text-ink-soft hover:text-field xl:inline" title="Free hotline, Saturday to Thursday, 10 AM to 6 PM">
+          <a
+            href={HOTLINE_TEL}
+            className={`hidden text-sm font-semibold xl:inline ${floating ? `rounded-full px-3.5 py-2.5 transition-colors duration-300 ${pill}` : 'text-ink-soft hover:text-field'}`}
+            title="Free hotline, Saturday to Thursday, 10 AM to 6 PM"
+          >
             {HOTLINE}
           </a>
-          <Link href="/contact/" className="btn-primary !px-5 !py-2.5">
+          <Link href="/contact/" className={`btn-primary !px-5 !py-2.5 ${floating ? 'shadow-[0_12px_30px_-12px_rgba(3,143,47,0.7)]' : ''}`}>
             Contact us
           </Link>
         </div>
 
         <button
           type="button"
-          className="ml-auto inline-flex h-11 w-11 items-center justify-center rounded-full ring-1 ring-ink/10 lg:hidden"
+          className={`ml-auto inline-flex h-11 w-11 items-center justify-center rounded-full lg:hidden ${floating ? `transition-colors duration-300 ${pill}` : 'ring-1 ring-ink/10'}`}
           aria-label={mobile ? 'Close menu' : 'Open menu'}
           aria-expanded={mobile}
           onClick={() => setMobile(!mobile)}
@@ -113,7 +150,7 @@ export function Header() {
       </div>
 
       {mobile && (
-        <div className="fixed inset-x-0 bottom-0 top-[var(--header-h)] overflow-y-auto bg-[#FFFDF5] lg:hidden">
+        <div className={`fixed inset-x-0 bottom-0 overflow-y-auto bg-[#FFFDF5] lg:hidden ${floating ? 'top-0 pt-[calc(var(--header-h)+12px)]' : 'top-[var(--header-h)]'}`}>
           <nav aria-label="Mobile" className="container py-6">
             <ul className="divide-y divide-ink/10">
               {nav.map((g) => (

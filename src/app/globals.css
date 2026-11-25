@@ -73,6 +73,19 @@
   to { opacity: 1; }
 }
 .screen-in { animation: screenIn 0.4s ease-out backwards; }
+@keyframes loopIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+.loop-stop { animation: loopIn 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(0.35s + var(--k) * 90ms); }
+.wt-step { opacity: 0; transform: translateY(26px); filter: blur(6px); transition: opacity 0.6s ease, transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1), filter 0.6s ease; }
+.wt-step.is-placed { opacity: 0.55; transform: none; filter: none; }
+.wt-step.is-active { opacity: 1; }
+@keyframes calloutIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+.wt-callout { animation: calloutIn 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .hero-rise { animation: lowerThird 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 
 @keyframes kenburns {

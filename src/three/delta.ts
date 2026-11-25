@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import { Water } from 'three/examples/jsm/objects/Water.js';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   BloomEffect,
   DepthOfFieldEffect,
@@ -110,25 +110,32 @@ function riverDist(x: number, z: number) {
 }
 
 /* ------------------------------------------------------------------ camera keys (one per beat) */
-type Key = { pos: THREE.Vector3; target: THREE.Vector3; sun: number; az: number | null; dof: number };
-// sun = elevation in degrees, az = azimuth in degrees (0 = +x), dof = blur strength
+// The camera orbits a target: d = distance (m), b = bearing from the target in degrees (0 = +z, 90 = +x),
+// e = elevation in degrees. sun = sun elevation, az = fixed sun azimuth (null = three-quarter light
+// from the view), dof = blur strength, s = how far the subject sits right of centre on wide screens.
+type Key = { t: THREE.Vector3; d: number; b: number; e: number; sun: number; az: number | null; dof: number; s?: number; orbit?: number };
 const KEYS: Record<string, Key> = {
-  intro: { pos: V(-150, 48, -190), target: V(30, 0, 20), sun: 11, az: 70, dof: 0 },
-  apply: { pos: V(9, 3.1, 8.5), target: V(1.5, 1.7, -1.5), sun: 16, az: null, dof: 1 },
-  fund: { pos: V(-42, 42, 8), target: V(-110, 4, -66), sun: 26, az: null, dof: 0.4 },
-  receive: { pos: V(-48, 46, -58), target: V(-30, 2, -10), sun: 34, az: null, dof: 0.2 },
-  buy: { pos: V(70, 7, -24), target: V(95, 2.2, -50), sun: 42, az: null, dof: 0.9 },
-  card: { pos: V(46, 16, -12), target: V(76, 1.5, -40), sun: 46, az: null, dof: 0.6 },
-  grow: { pos: V(66, 3.4, 31), target: V(80, 1.2, 44), sun: 52, az: null, dof: 1 },
-  grow2: { pos: V(30, 34, -6), target: V(110, 0, 56), sun: 50, az: null, dof: 0.2 },
-  harvest: { pos: V(150, 9, 26), target: V(126, 1, 54), sun: 34, az: null, dof: 0.7 },
-  collect: { pos: V(92, 11, 66), target: V(121, 2, 92), sun: 26, az: null, dof: 0.7 },
-  dispatch: { pos: V(150, 22, 54), target: V(205, 1, 40), sun: 20, az: null, dof: 0.4 },
-  center: { pos: V(128, 7, 108), target: V(120, 2.2, 82), sun: 15, az: null, dof: 0.6 },
-  paid: { pos: V(11, 3.4, 10), target: V(1.5, 1.7, -1.5), sun: 9, az: null, dof: 1 },
-  returns: { pos: V(-30, 52, 60), target: V(-90, 4, -50), sun: 6, az: null, dof: 0.2 },
-  outro: { pos: V(260, 120, 280), target: V(0, 0, 30), sun: 5, az: 200, dof: 0 },
+  intro: { t: V(15, 0, 10), d: 215, b: -130, e: 21, sun: 12, az: 70, dof: 0, s: 0.3, orbit: 24 },
+  apply: { t: V(1.5, 1.6, -1.5), d: 7.5, b: 36, e: 7, sun: 16, az: null, dof: 1, s: 0.16 },
+  fund: { t: V(-102, 5, -48), d: 36, b: -30, e: 12, sun: 24, az: null, dof: 0.5 },
+  receive: { t: V(-45, 8, -24), d: 75, b: -110, e: 16, sun: 32, az: null, dof: 0.2 },
+  buy: { t: V(97, 2.2, -49), d: 16, b: 22, e: 9, sun: 40, az: null, dof: 0.9 },
+  card: { t: V(80, 2, -40), d: 26, b: -55, e: 13, sun: 45, az: null, dof: 0.6 },
+  grow: { t: V(80, 1.2, 44), d: 13, b: -133, e: 8, sun: 50, az: null, dof: 1 },
+  grow2: { t: V(94, 1, 50), d: 52, b: -125, e: 27, sun: 50, az: null, dof: 0.3 },
+  harvest: { t: V(122, 1, 52), d: 24, b: 139, e: 13, sun: 36, az: null, dof: 0.7 },
+  collect: { t: V(132, 2, 89), d: 26, b: -125, e: 13, sun: 28, az: null, dof: 0.7 },
+  dispatch: { t: V(185, 1, 55), d: 36, b: -100, e: 15, sun: 21, az: null, dof: 0.4 },
+  center: { t: V(120, 2.4, 84), d: 17, b: 16, e: 8, sun: 15, az: null, dof: 0.6 },
+  paid: { t: V(1.5, 1.6, -1.5), d: 8, b: 50, e: 8, sun: 10, az: null, dof: 1, s: 0.16 },
+  returns: { t: V(-90, 6, -48), d: 44, b: 40, e: 15, sun: 7, az: null, dof: 0.3 },
+  outro: { t: V(20, 0, 20), d: 240, b: 46, e: 20, sun: 5, az: 200, dof: 0 },
 };
+const smoother = (a: number, b: number, v: number) => {
+  const t = clamp01((v - a) / (b - a));
+  return t * t * t * (t * (t * 6 - 15) + 10);
+};
+const wrapDeg = (d: number) => ((((d + 180) % 360) + 360) % 360) - 180;
 
 export type LabelAnchor = THREE.Vector3;
 
@@ -225,8 +232,8 @@ export class DeltaWorld {
   private running = false;
   private visible = true;
   private ids: string[];
-  private posCurve!: THREE.CatmullRomCurve3;
-  private tgtCurve!: THREE.CatmullRomCurve3;
+  private vel = 0;
+  private loopUni = { uTime: { value: 0 }, uOpacity: { value: 0 }, uDraw: { value: 0 } };
   private composer?: EffectComposer;
   private dof?: DepthOfFieldEffect;
   private ao?: N8AOPostPass;
@@ -276,11 +283,6 @@ export class DeltaWorld {
     this.renderer = r;
     this.camera = new THREE.PerspectiveCamera(36, 1, 0.3, 4000);
     this.pmrem = new THREE.PMREMGenerator(r);
-
-    const pts = beatIds.map((id) => (KEYS[id] ?? KEYS.intro).pos.clone());
-    const tgs = beatIds.map((id) => (KEYS[id] ?? KEYS.intro).target.clone());
-    this.posCurve = new THREE.CatmullRomCurve3(pts, false, 'centripetal', 0.5);
-    this.tgtCurve = new THREE.CatmullRomCurve3(tgs, false, 'centripetal', 0.5);
 
     this.buildSky();
     this.buildLand();
@@ -792,10 +794,123 @@ export class DeltaWorld {
   }
 
   /* ------------------------------ vegetation */
-  private treeGeos?: { crown: THREE.BufferGeometry; palm: THREE.BufferGeometry; banana: THREE.BufferGeometry; areca: THREE.BufferGeometry };
+  /* ------------------------------ trees: leaf cards over a soft inner crown, textured palm fronds */
+  private foliageTex?: { leaf: THREE.Texture; frond: THREE.Texture; banana: THREE.Texture };
+  private foliage() {
+    if (this.foliageTex) return this.foliageTex;
+    const leaf = canvasTex(
+      256,
+      256,
+      (c) => {
+        const R = rng(7);
+        for (let i = 0; i < 150; i++) {
+          const a = R() * Math.PI * 2;
+          const rr = Math.sqrt(R()) * 104;
+          const x = 128 + Math.cos(a) * rr;
+          const y = 128 + Math.sin(a) * rr;
+          const len = 20 + R() * 18;
+          const wid = 7 + R() * 6;
+          const lum = 0.75 + R() * 0.5;
+          c.save();
+          c.translate(x, y);
+          c.rotate(R() * Math.PI * 2);
+          c.fillStyle = `rgb(${(58 * lum) | 0},${(104 * lum) | 0},${(38 * lum) | 0})`;
+          c.beginPath();
+          c.moveTo(-len / 2, 0);
+          c.quadraticCurveTo(0, -wid, len / 2, 0);
+          c.quadraticCurveTo(0, wid, -len / 2, 0);
+          c.fill();
+          c.strokeStyle = 'rgba(25,45,15,0.35)';
+          c.lineWidth = 1;
+          c.beginPath();
+          c.moveTo(-len / 2, 0);
+          c.lineTo(len / 2, 0);
+          c.stroke();
+          c.restore();
+        }
+      },
+      false,
+    );
+    const frond = canvasTex(
+      128,
+      512,
+      (c) => {
+        const R = rng(9);
+        c.strokeStyle = '#6b7f3a';
+        c.lineWidth = 4;
+        c.beginPath();
+        c.moveTo(64, 512);
+        c.lineTo(64, 6);
+        c.stroke();
+        for (let y = 500; y > 10; y -= 6) {
+          const t = 1 - y / 512;
+          const len = 60 * Math.sin(Math.PI * Math.min(1, t * 1.05 + 0.08)) + 6;
+          for (const side of [-1, 1]) {
+            const lum = 0.8 + R() * 0.4;
+            c.strokeStyle = `rgb(${(66 * lum) | 0},${(112 * lum) | 0},${(40 * lum) | 0})`;
+            c.lineWidth = 3.2 + R() * 1.4;
+            c.lineCap = 'round';
+            c.beginPath();
+            c.moveTo(64, y);
+            const ex = 64 + side * len * (0.92 + R() * 0.08);
+            const ey = y - len * 0.55;
+            c.quadraticCurveTo(64 + side * len * 0.5, y - len * 0.2, ex, ey);
+            c.stroke();
+          }
+        }
+      },
+      false,
+    );
+    const banana = canvasTex(
+      256,
+      512,
+      (c) => {
+        const R = rng(11);
+        c.fillStyle = '#5f9a3a';
+        c.beginPath();
+        c.moveTo(128, 506);
+        c.bezierCurveTo(6, 420, 6, 90, 128, 6);
+        c.bezierCurveTo(250, 90, 250, 420, 128, 506);
+        c.fill();
+        for (let y = 20; y < 500; y += 5) {
+          c.strokeStyle = `rgba(40,80,25,${0.18 + R() * 0.12})`;
+          c.lineWidth = 1;
+          c.beginPath();
+          c.moveTo(128, y);
+          c.lineTo(10, y - 40);
+          c.moveTo(128, y);
+          c.lineTo(246, y - 40);
+          c.stroke();
+        }
+        c.strokeStyle = '#c9d68a';
+        c.lineWidth = 5;
+        c.beginPath();
+        c.moveTo(128, 510);
+        c.lineTo(128, 10);
+        c.stroke();
+        // wind tears along the edges
+        c.globalCompositeOperation = 'destination-out';
+        for (let i = 0; i < 9; i++) {
+          const y = 80 + R() * 380;
+          const side = R() < 0.5 ? -1 : 1;
+          c.lineWidth = 2 + R() * 2;
+          c.beginPath();
+          c.moveTo(128 + side * 120, y - 30);
+          c.lineTo(128 + side * (24 + R() * 40), y);
+          c.stroke();
+        }
+        c.globalCompositeOperation = 'source-over';
+      },
+      false,
+    );
+    this.foliageTex = { leaf, frond, banana };
+    return this.foliageTex;
+  }
+
+  private treeParts?: Record<'crown' | 'crownFar' | 'palm' | 'banana' | 'areca', { geo: THREE.BufferGeometry; tex?: 'leaf' | 'frond' | 'banana' }[]>;
   private trees() {
-    if (this.treeGeos) return this.treeGeos;
-    const colorize = (g: THREE.BufferGeometry, fn: (p: THREE.Vector3, n: THREE.Vector3) => THREE.Color) => {
+    if (this.treeParts) return this.treeParts;
+    const tint = (g: THREE.BufferGeometry, fn: (p: THREE.Vector3, n: THREE.Vector3, i: number) => THREE.Color) => {
       const p = g.attributes.position as THREE.BufferAttribute;
       const nr = g.attributes.normal as THREE.BufferAttribute;
       const cols = new Float32Array(p.count * 3);
@@ -804,7 +919,7 @@ export class DeltaWorld {
       for (let i = 0; i < p.count; i++) {
         pv.fromBufferAttribute(p, i);
         nv.fromBufferAttribute(nr, i);
-        const c = fn(pv, nv);
+        const c = fn(pv, nv, i);
         cols[i * 3] = c.r;
         cols[i * 3 + 1] = c.g;
         cols[i * 3 + 2] = c.b;
@@ -812,122 +927,183 @@ export class DeltaWorld {
       g.setAttribute('color', new THREE.BufferAttribute(cols, 3));
       return g;
     };
-    const clean = (g: THREE.BufferGeometry) => {
-      const n = g.index ? g.toNonIndexed() : g;
-      n.deleteAttribute('uv');
-      return n;
+    const solid = (g: THREE.BufferGeometry) => {
+      g.deleteAttribute('uv');
+      if (g.index) return g;
+      g.deleteAttribute('normal');
+      const m = mergeVertices(g);
+      m.computeVertexNormals();
+      return m;
     };
     const bark = new THREE.Color('#5b4636');
-    // broad crown (mango / rain tree)
-    const crownParts: THREE.BufferGeometry[] = [];
-    const trunk = new THREE.CylinderGeometry(0.22, 0.38, 4.2, 7);
-    trunk.translate(0, 2.1, 0);
-    crownParts.push(colorize(clean(trunk), () => bark));
     const R = rng(21);
-    for (let i = 0; i < 6; i++) {
-      const b = new THREE.IcosahedronGeometry(1.9 + R() * 1.2, 2);
-      const p = b.attributes.position as THREE.BufferAttribute;
-      for (let j = 0; j < p.count; j++) {
-        const x = p.getX(j);
-        const y = p.getY(j);
-        const z = p.getZ(j);
-        const d = 1 + (fbm(x * 0.9 + i * 3, z * 0.9 + y * 0.7, 2) - 0.5) * 0.55;
-        p.setXYZ(j, x * d, y * d * 0.75, z * d);
-      }
-      b.computeVertexNormals();
-      b.translate((R() - 0.5) * 3.2, 4.8 + R() * 2.2, (R() - 0.5) * 3.2);
-      crownParts.push(
-        colorize(clean(b), (pp, n) => {
-          const t = 0.55 + n.y * 0.3 + (fbm(pp.x * 2, pp.z * 2, 2) - 0.5) * 0.35;
-          return new THREE.Color().setRGB(0.16 * t + 0.05, 0.36 * t + 0.07, 0.11 * t + 0.03);
-        }),
-      );
+
+    // broad crown (mango / rain tree): trunk, branches, a dark soft inner crown and leaf cards
+    const wood: THREE.BufferGeometry[] = [];
+    const trunk = new THREE.CylinderGeometry(0.22, 0.4, 4.6, 10, 3);
+    trunk.translate(0, 2.3, 0);
+    wood.push(tint(solid(trunk), () => bark));
+    for (let i = 0; i < 4; i++) {
+      const br = new THREE.CylinderGeometry(0.08, 0.16, 2.6, 6);
+      br.translate(0, 1.3, 0);
+      br.rotateZ(0.7 + R() * 0.3);
+      br.rotateY((i / 4) * Math.PI * 2 + R());
+      br.translate(0, 3.6 + R() * 0.6, 0);
+      wood.push(tint(solid(br), () => bark));
     }
-    const crown = mergeGeometries(crownParts)!;
-    // coconut palm
-    const palmParts: THREE.BufferGeometry[] = [];
+    const blobs: { c: THREE.Vector3; r: number }[] = [];
+    for (let i = 0; i < 6; i++) blobs.push({ c: V((R() - 0.5) * 3.4, 5.2 + R() * 2, (R() - 0.5) * 3.4), r: 1.7 + R() * 1.0 });
+    const crownC = V(0, 6.2, 0);
+    const blobGeo = (detail: number, shade: number) =>
+      blobs.map((bl, i) => {
+        const ico = new THREE.IcosahedronGeometry(bl.r, detail);
+        ico.deleteAttribute('uv');
+        ico.deleteAttribute('normal');
+        const b = mergeVertices(ico);
+        const p = b.attributes.position as THREE.BufferAttribute;
+        for (let j = 0; j < p.count; j++) {
+          const x = p.getX(j);
+          const y = p.getY(j);
+          const z = p.getZ(j);
+          const d = 1 + (fbm(x * 0.8 + i * 3, z * 0.8 + y * 0.6, 2) - 0.5) * 0.45;
+          p.setXYZ(j, x * d, y * d * 0.8, z * d);
+        }
+        b.computeVertexNormals();
+        b.translate(bl.c.x, bl.c.y, bl.c.z);
+        return tint(b, (pp, n) => {
+          const t = shade * (0.6 + n.y * 0.28 + (fbm(pp.x * 1.5, pp.z * 1.5, 2) - 0.5) * 0.3);
+          return new THREE.Color().setRGB(0.15 * t + 0.03, 0.32 * t + 0.05, 0.1 * t + 0.02);
+        });
+      });
+    const crownWood = mergeGeometries([...wood, ...blobGeo(2, 0.75)])!;
+    const cards: THREE.BufferGeometry[] = [];
+    const q = new THREE.Quaternion();
+    const nrm = new THREE.Vector3();
+    for (let i = 0; i < 280; i++) {
+      const bl = blobs[i % blobs.length];
+      const dir = V(R() - 0.5, R() - 0.25, R() - 0.5).normalize();
+      const c = bl.c.clone().addScaledVector(dir, bl.r * (0.8 + R() * 0.32));
+      const pl = new THREE.PlaneGeometry(1.7, 1.7);
+      q.setFromEuler(new THREE.Euler(R() * Math.PI, R() * Math.PI, R() * Math.PI));
+      pl.applyQuaternion(q);
+      pl.translate(c.x, c.y * 0.92, c.z);
+      // light the card as part of the crown: normals point away from the crown centre
+      nrm.copy(c).sub(crownC).normalize().lerp(dir, 0.4).normalize();
+      const na = pl.attributes.normal as THREE.BufferAttribute;
+      for (let j = 0; j < na.count; j++) na.setXYZ(j, nrm.x, nrm.y, nrm.z);
+      const lum = 0.82 + R() * 0.36;
+      const warm = R() * 0.08;
+      tint(pl, () => new THREE.Color().setRGB(lum + warm, lum, lum * 0.92));
+      cards.push(pl);
+    }
+    const crownLeaf = mergeGeometries(cards)!;
+    // far crowns: soft rounded canopy only
+    const crownFar = mergeGeometries([...wood.map((g) => g.clone()), ...blobGeo(1, 1)])!;
+
+    // coconut palm: curved trunk and textured fronds
     const curve = new THREE.QuadraticBezierCurve3(V(0, 0, 0), V(0.4, 4, 0), V(1.4, 9, 0));
-    const pt = new THREE.TubeGeometry(curve, 10, 0.17, 6, false);
-    palmParts.push(colorize(clean(pt), () => new THREE.Color('#6d5a45')));
-    for (let i = 0; i < 11; i++) {
-      const fr = new THREE.PlaneGeometry(0.9, 4.6, 1, 6);
+    const palmTrunk = tint(solid(new THREE.TubeGeometry(curve, 12, 0.18, 8, false)), (pp) => new THREE.Color('#6d5a45').multiplyScalar(0.85 + Math.sin(pp.y * 9) * 0.12));
+    const frondGeo = (w: number, l: number, droop: number, fold: number) => {
+      const fr = new THREE.PlaneGeometry(w, l, 2, 10);
       const fp = fr.attributes.position as THREE.BufferAttribute;
       for (let j = 0; j < fp.count; j++) {
-        const y = fp.getY(j) + 2.3;
+        const y = fp.getY(j) + l / 2;
+        const x = fp.getX(j);
         fp.setY(j, y);
-        fp.setZ(j, -0.09 * y * y);
-        fp.setX(j, fp.getX(j) * (1 - y / 5.5));
+        fp.setZ(j, -droop * y * y - Math.abs(x) * fold);
       }
-      fr.rotateX(-0.25);
-      fr.rotateY((i / 11) * Math.PI * 2 + R());
+      fr.computeVertexNormals();
+      return fr;
+    };
+    const fronds: THREE.BufferGeometry[] = [];
+    for (let i = 0; i < 13; i++) {
+      const fr = frondGeo(2.6, 5, 0.075 + R() * 0.03, 0.35);
+      fr.rotateX(-0.35 - R() * 0.35);
+      fr.rotateY((i / 13) * Math.PI * 2 + R() * 0.3);
       fr.translate(1.4, 9, 0);
-      palmParts.push(colorize(clean(fr), (pp) => new THREE.Color().setRGB(0.2, 0.36 + (pp.y - 7) * 0.02, 0.12)));
+      fronds.push(tint(fr, () => new THREE.Color().setScalar(0.85 + R() * 0.25)));
     }
-    const palm = mergeGeometries(palmParts)!;
-    // banana
-    const banParts: THREE.BufferGeometry[] = [];
-    const st = new THREE.CylinderGeometry(0.16, 0.22, 2.2, 6);
-    st.translate(0, 1.1, 0);
-    banParts.push(colorize(clean(st), () => new THREE.Color('#7e8a4a')));
+    const palmLeaf = mergeGeometries(fronds)!;
+
+    // banana: pseudo-stem and broad torn leaves
+    const st = new THREE.CylinderGeometry(0.15, 0.24, 2.3, 8);
+    st.translate(0, 1.15, 0);
+    const banStem = tint(solid(st), () => new THREE.Color('#7e8a4a'));
+    const bl: THREE.BufferGeometry[] = [];
     for (let i = 0; i < 8; i++) {
-      const lf = new THREE.PlaneGeometry(0.75, 2.4, 2, 5);
+      const lf = new THREE.PlaneGeometry(0.9, 2.6, 2, 6);
       const lp = lf.attributes.position as THREE.BufferAttribute;
       for (let j = 0; j < lp.count; j++) {
-        const y = lp.getY(j) + 1.2;
+        const y = lp.getY(j) + 1.3;
         lp.setY(j, y * 0.9);
-        lp.setZ(j, 0.25 * y * y - 0.12 * Math.abs(lp.getX(j)) * 4);
+        lp.setZ(j, 0.22 * y * y - Math.abs(lp.getX(j)) * 0.35);
       }
-      lf.rotateX(-1.0 + (i % 3) * 0.2);
+      lf.computeVertexNormals();
+      lf.rotateX(-1.0 + (i % 3) * 0.22);
       lf.rotateY((i / 8) * Math.PI * 2 + R() * 0.4);
-      lf.translate(0, 2.1, 0);
-      banParts.push(colorize(clean(lf), (pp) => new THREE.Color().setRGB(0.27, 0.46 + pp.y * 0.02, 0.14)));
+      lf.translate(0, 2.2, 0);
+      bl.push(tint(lf, () => new THREE.Color().setScalar(0.85 + R() * 0.25)));
     }
-    const banana = mergeGeometries(banParts)!;
+    const banLeaf = mergeGeometries(bl)!;
+
     // areca (supari) palm: tall and slender
-    const arParts: THREE.BufferGeometry[] = [];
-    const at = new THREE.CylinderGeometry(0.1, 0.13, 12, 6);
+    const at = new THREE.CylinderGeometry(0.1, 0.14, 12, 8, 4);
     at.translate(0, 6, 0);
-    arParts.push(colorize(clean(at), () => new THREE.Color('#8b8173')));
-    for (let i = 0; i < 8; i++) {
-      const fr = new THREE.PlaneGeometry(0.7, 3, 1, 4);
-      const fp = fr.attributes.position as THREE.BufferAttribute;
-      for (let j = 0; j < fp.count; j++) {
-        const y = fp.getY(j) + 1.5;
-        fp.setY(j, y);
-        fp.setZ(j, -0.14 * y * y);
-      }
-      fr.rotateX(-0.5);
-      fr.rotateY((i / 8) * Math.PI * 2);
+    const arTrunk = tint(solid(at), (pp) => new THREE.Color('#8b8173').multiplyScalar(0.9 + Math.sin(pp.y * 6) * 0.08));
+    const af: THREE.BufferGeometry[] = [];
+    for (let i = 0; i < 9; i++) {
+      const fr = frondGeo(1.8, 3.4, 0.12, 0.3);
+      fr.rotateX(-0.5 - R() * 0.3);
+      fr.rotateY((i / 9) * Math.PI * 2 + R() * 0.3);
       fr.translate(0, 12, 0);
-      arParts.push(colorize(clean(fr), () => new THREE.Color('#3f6b2b')));
+      af.push(tint(fr, () => new THREE.Color().setScalar(0.8 + R() * 0.25)));
     }
-    const areca = mergeGeometries(arParts)!;
-    this.treeGeos = { crown, palm, banana, areca };
-    return this.treeGeos;
+    const arLeaf = mergeGeometries(af)!;
+
+    this.treeParts = {
+      crown: [{ geo: crownWood }, { geo: crownLeaf, tex: 'leaf' }],
+      crownFar: [{ geo: crownFar }],
+      palm: [{ geo: palmTrunk }, { geo: palmLeaf, tex: 'frond' }],
+      banana: [{ geo: banStem }, { geo: banLeaf, tex: 'banana' }],
+      areca: [{ geo: arTrunk }, { geo: arLeaf, tex: 'frond' }],
+    };
+    return this.treeParts;
   }
 
-  private plantTrees(spots: { p: THREE.Vector3; kind: 'crown' | 'palm' | 'banana' | 'areca'; s: number }[]) {
-    const geos = this.trees();
+  private plantTrees(spots: { p: THREE.Vector3; kind: 'crown' | 'palm' | 'banana' | 'areca'; s: number }[], near = true) {
+    const parts = this.trees();
+    const tex = this.foliage();
     const R = rng(spots.length + 3);
     (['crown', 'palm', 'banana', 'areca'] as const).forEach((kind) => {
       const list = spots.filter((s) => s.kind === kind);
       if (!list.length) return;
-      const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, side: THREE.DoubleSide });
-      windify(m, this.windUni, kind === 'crown' ? 0.12 : 0.35, kind === 'areca' ? 12 : kind === 'palm' ? 9 : 7);
-      const im = new THREE.InstancedMesh(geos[kind], m, list.length);
       const m4 = new THREE.Matrix4();
       const q = new THREE.Quaternion();
       const c = new THREE.Color();
-      list.forEach((s, i) => {
+      const mats4: THREE.Matrix4[] = [];
+      const cols: THREE.Color[] = [];
+      list.forEach((s) => {
         q.setFromAxisAngle(V(0, 1, 0), R() * Math.PI * 2);
         m4.compose(s.p, q, V(s.s, s.s * (0.85 + R() * 0.3), s.s));
-        im.setMatrixAt(i, m4);
+        mats4.push(m4.clone());
         c.setRGB(0.85 + R() * 0.3, 0.85 + R() * 0.3, 0.8 + R() * 0.25);
-        im.setColorAt(i, c);
+        cols.push(c.clone());
       });
-      im.castShadow = true;
-      im.receiveShadow = true;
-      this.scene.add(im);
+      const set = parts[kind === 'crown' && !near ? 'crownFar' : kind];
+      const height = kind === 'areca' ? 12 : kind === 'palm' ? 9 : 7;
+      const strength = kind === 'crown' ? 0.12 : 0.35;
+      set.forEach((part) => {
+        const m = part.tex
+          ? new THREE.MeshStandardMaterial({ map: tex[part.tex], alphaTest: 0.5, vertexColors: true, roughness: 0.78, side: THREE.DoubleSide })
+          : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.88 });
+        windify(m, this.windUni, strength, height);
+        const im = new THREE.InstancedMesh(part.geo, m, list.length);
+        mats4.forEach((mm, i) => im.setMatrixAt(i, mm));
+        cols.forEach((cc, i) => im.setColorAt(i, cc));
+        im.castShadow = true;
+        im.receiveShadow = true;
+        this.scene.add(im);
+      });
     });
   }
 
@@ -950,9 +1126,40 @@ export class DeltaWorld {
       });
     return this.tinTex;
   }
+  private plasterTex?: THREE.Texture;
+  private wallMats = new Map<string, THREE.MeshStandardMaterial>();
+  private wallMat(color: string) {
+    if (!this.plasterTex)
+      this.plasterTex = canvasTex(256, 256, (c) => {
+        c.fillStyle = '#ffffff';
+        c.fillRect(0, 0, 256, 256);
+        for (let i = 0; i < 260; i++) {
+          c.fillStyle = `rgba(${hash2(i, 2) > 0.5 ? '110,95,70' : '255,250,240'},${0.02 + hash2(i, 3) * 0.04})`;
+          c.beginPath();
+          c.arc(hash2(i, 4) * 256, hash2(i, 5) * 256, 3 + hash2(i, 6) * 22, 0, 7);
+          c.fill();
+        }
+        // rain streaks and a mud-splashed base
+        for (let x = 0; x < 256; x += 2) {
+          c.fillStyle = `rgba(70,60,45,${hash2(x, 7) * 0.035})`;
+          c.fillRect(x, 0, 2, 40 + hash2(x, 8) * 120);
+        }
+        const gr = c.createLinearGradient(0, 200, 0, 256);
+        gr.addColorStop(0, 'rgba(95,75,50,0)');
+        gr.addColorStop(1, 'rgba(95,75,50,0.28)');
+        c.fillStyle = gr;
+        c.fillRect(0, 200, 256, 56);
+      });
+    let m = this.wallMats.get(color);
+    if (!m) {
+      m = new THREE.MeshStandardMaterial({ map: this.plasterTex, color, roughness: 0.95 });
+      this.wallMats.set(color, m);
+    }
+    return m;
+  }
   private house(w: number, h: number, d: number, wall: string, roof: 'tin' | 'straw' | 'slab' = 'tin') {
     const g = new THREE.Group();
-    const body = mesh(new THREE.BoxGeometry(w, h, d), mat(wall, 0.95));
+    const body = mesh(new THREE.BoxGeometry(w, h, d), this.wallMat(wall));
     body.position.y = h / 2;
     g.add(body);
     if (roof === 'slab') {
@@ -979,6 +1186,16 @@ export class DeltaWorld {
     const door = mesh(new THREE.BoxGeometry(w * 0.2, h * 0.65, 0.06), mat('#5a3f2c', 0.8), false);
     door.position.set(0, (h * 0.65) / 2, d / 2 + 0.03);
     g.add(door);
+    const plinth = mesh(new THREE.BoxGeometry(w + 0.3, 0.3, d + 0.3), mat('#8f8676', 0.95), false, true);
+    plinth.position.y = 0.15;
+    g.add(plinth);
+    if (w > 4.5) {
+      for (const sx of [-1, 1]) {
+        const win = mesh(new THREE.BoxGeometry(w * 0.16, h * 0.28, 0.05), mat('#3b4a44', 0.6), false);
+        win.position.set(sx * w * 0.3, h * 0.55, d / 2 + 0.03);
+        g.add(win);
+      }
+    }
     return g;
   }
   private sign(text: string, w: number, h: number, bg: string, fg: string) {
@@ -1164,9 +1381,14 @@ export class DeltaWorld {
   private buildBazaar() {
     const s = this.scene;
     const R = rng(55);
+    const walls = ['#cdbb9c', '#bfae90', '#d6c8ad', '#b9c4ba', '#e0d2b6', '#c9b08f', '#d8cdb8', '#b7a98f', '#cfc3a6'];
+    const tall = [1, 6, 8];
     for (let i = 0; i < 9; i++) {
-      const h = this.house(5, 3, 5.5, ['#cdbb9c', '#bfae90', '#d6c8ad'][i % 3], 'tin');
-      h.position.set(BAZAAR.x - 22 + i * 6, 0, BAZAAR.z - 4);
+      const two = tall.includes(i);
+      const depth = 5.5 + (two ? 1 : R() * 0.6);
+      const h = this.house(5, two ? 6.4 : 3 + R() * 0.5, depth, walls[i], two ? 'slab' : 'tin');
+      // shop fronts stay in one line so the signs and awnings sit on them
+      h.position.set(BAZAAR.x - 22 + i * 6, 0, BAZAAR.z - 1.3 - depth / 2);
       s.add(h);
       // awning
       const aw = mesh(new THREE.BoxGeometry(4.8, 0.08, 2), new THREE.MeshStandardMaterial({ map: this.tin(), roughness: 0.5, metalness: 0.4 }));
@@ -1323,7 +1545,7 @@ export class DeltaWorld {
       if (q.distanceTo(CENTER) < 30 || (q.x > FIELD.x0 - 5 && q.x < FIELD.x1 + 5 && q.z < FIELD.z1 + 8 && q.z > FIELD.z0)) continue;
       spots.push({ p: q, kind: R() < 0.5 ? 'crown' : 'palm', s: 0.9 + R() * 0.4 });
     }
-    this.plantTrees(spots);
+    this.plantTrees(spots, false);
     // distant houses: tin roofs catching the light
     const hg = new THREE.BoxGeometry(5, 2.8, 4);
     const houses = new THREE.InstancedMesh(hg, new THREE.MeshStandardMaterial({ map: this.tin(), color: '#cfd4d6', roughness: 0.45, metalness: 0.5 }), roofs.length);
@@ -1333,44 +1555,111 @@ export class DeltaWorld {
   }
 
   /* ------------------------------ people */
+  private plaidTex?: THREE.Texture;
+  private plaidMats = new Map<string, THREE.MeshStandardMaterial>();
+  private lungiMat(color: string) {
+    if (!this.plaidTex) {
+      this.plaidTex = canvasTex(64, 64, (c) => {
+        c.fillStyle = '#ffffff';
+        c.fillRect(0, 0, 64, 64);
+        c.fillStyle = 'rgba(0,0,0,0.22)';
+        for (let i = 0; i < 64; i += 16) {
+          c.fillRect(i, 0, 6, 64);
+          c.fillRect(0, i, 64, 6);
+        }
+        c.fillStyle = 'rgba(255,255,255,0.35)';
+        for (let i = 9; i < 64; i += 16) {
+          c.fillRect(i, 0, 1.5, 64);
+          c.fillRect(0, i, 64, 1.5);
+        }
+      });
+      this.plaidTex.repeat.set(3, 2);
+    }
+    let m = this.plaidMats.get(color);
+    if (!m) {
+      m = new THREE.MeshStandardMaterial({ map: this.plaidTex, color, roughness: 0.95 });
+      this.plaidMats.set(color, m);
+    }
+    return m;
+  }
+
+  /** A villager: shaped torso, a face that shows which way they look, elbows, a checked lungi and sandals. Faces +z. */
   private person(shirt: string, lower: string, scale = 1): { g: THREE.Group; parts: PersonParts } {
     const g = new THREE.Group();
-    const skin = mat('#7a4d35', 0.7);
+    const skin = mat('#86573a', 0.6);
+    const cloth = mat(shirt, 0.92);
+    const trim = mat(new THREE.Color(shirt).multiplyScalar(0.82).getStyle(), 0.9);
     const torso = new THREE.Group();
     torso.position.y = 0.95;
-    const chest = mesh(new THREE.CapsuleGeometry(0.17, 0.42, 4, 10), mat(shirt, 0.9));
-    chest.position.y = 0.3;
-    const head = mesh(new THREE.SphereGeometry(0.115, 14, 12), skin);
-    head.position.y = 0.78;
-    const hair = mesh(new THREE.SphereGeometry(0.12, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat('#1c1612', 0.8));
-    hair.position.y = 0.8;
-    torso.add(chest, head, hair);
+    const prof = [
+      [0.001, 0], [0.15, 0], [0.158, 0.12], [0.152, 0.26], [0.172, 0.42], [0.19, 0.52], [0.15, 0.6], [0.06, 0.645], [0.001, 0.65],
+    ].map(([x, y]) => new THREE.Vector2(x, y));
+    const chestG = new THREE.LatheGeometry(prof, 18);
+    chestG.scale(1.22, 1, 0.8);
+    const chest = mesh(chestG, cloth);
+    const placket = mesh(new THREE.BoxGeometry(0.022, 0.42, 0.012), trim, false);
+    placket.position.set(0, 0.36, 0.128);
+    const collar = mesh(new THREE.TorusGeometry(0.062, 0.016, 6, 14), trim, false);
+    collar.rotation.x = Math.PI / 2;
+    collar.position.y = 0.635;
+    const neck = mesh(new THREE.CylinderGeometry(0.048, 0.052, 0.1, 10), skin);
+    neck.position.y = 0.69;
+    const head = new THREE.Group();
+    head.position.y = 0.8;
+    const skull = mesh(new THREE.SphereGeometry(0.108, 18, 14), skin);
+    skull.scale.set(0.92, 1.06, 1);
+    const nose = mesh(new THREE.ConeGeometry(0.02, 0.05, 6), skin, false);
+    nose.rotation.x = Math.PI / 2;
+    nose.position.set(0, -0.012, 0.106);
+    const hair = mesh(new THREE.SphereGeometry(0.115, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.52), mat('#18120e', 0.75));
+    hair.position.set(0, 0.018, -0.012);
+    hair.rotation.x = -0.25;
+    const ears = [-1, 1].map((sx) => {
+      const e = mesh(new THREE.SphereGeometry(0.022, 8, 6), skin, false);
+      e.position.set(sx * 0.1, -0.005, -0.005);
+      return e;
+    });
+    head.add(skull, nose, hair, ...ears);
+    torso.add(chest, placket, collar, neck, head);
     const mkArm = (x: number) => {
       const a = new THREE.Group();
-      a.position.set(x, 0.55, 0);
-      const up = mesh(new THREE.CapsuleGeometry(0.05, 0.42, 3, 6), mat(shirt, 0.9));
-      up.position.y = -0.25;
-      const hand = mesh(new THREE.SphereGeometry(0.05, 8, 6), skin);
-      hand.position.y = -0.52;
-      a.add(up, hand);
+      a.position.set(x, 0.54, 0);
+      const sh = mesh(new THREE.SphereGeometry(0.062, 10, 8), cloth);
+      const up = mesh(new THREE.CapsuleGeometry(0.052, 0.24, 3, 8), cloth);
+      up.position.y = -0.16;
+      const elbow = new THREE.Group();
+      elbow.position.y = -0.32;
+      const fore = mesh(new THREE.CapsuleGeometry(0.042, 0.2, 3, 8), skin);
+      fore.position.y = -0.13;
+      const hand = mesh(new THREE.SphereGeometry(0.046, 8, 6), skin);
+      hand.scale.set(0.8, 1.15, 0.9);
+      hand.position.y = -0.29;
+      elbow.add(fore, hand);
+      a.add(sh, up, elbow);
+      a.userData.elbow = elbow;
       torso.add(a);
       return a;
     };
-    const armL = mkArm(-0.22);
-    const armR = mkArm(0.22);
-    const lungi = mesh(new THREE.CylinderGeometry(0.2, 0.26, 0.62, 12), mat(lower, 0.95));
+    const armL = mkArm(-0.215);
+    const armR = mkArm(0.215);
+    const lungi = mesh(new THREE.CylinderGeometry(0.2, 0.27, 0.62, 16, 1, true), this.lungiMat(lower));
     lungi.position.y = 0.66;
+    const knot = mesh(new THREE.TorusGeometry(0.2, 0.022, 6, 18), mat(lower, 0.95), false);
+    knot.rotation.x = Math.PI / 2;
+    knot.position.y = 0.96;
     const mkLeg = (x: number) => {
       const l = new THREE.Group();
       l.position.set(x, 0.62, 0);
-      const shin = mesh(new THREE.CapsuleGeometry(0.055, 0.42, 3, 6), skin);
+      const shin = mesh(new THREE.CapsuleGeometry(0.05, 0.42, 3, 8), skin);
       shin.position.y = -0.33;
-      l.add(shin);
+      const foot = mesh(new THREE.BoxGeometry(0.085, 0.035, 0.2), mat('#2a2420', 0.8));
+      foot.position.set(0, -0.6, 0.045);
+      l.add(shin, foot);
       return l;
     };
     const legL = mkLeg(-0.08);
     const legR = mkLeg(0.08);
-    g.add(torso, lungi, legL, legR);
+    g.add(torso, lungi, knot, legL, legR);
     g.scale.setScalar(scale);
     g.traverse((o) => ((o as THREE.Mesh).isMesh ? ((o.castShadow = true), (o.receiveShadow = true)) : null));
     return { g, parts: { legL, legR, armL, armR, torso } };
@@ -1381,15 +1670,18 @@ export class DeltaWorld {
     // the farmer, with a phone
     const f = this.person('#f3efe6', '#2f6a86', 1.05);
     f.g.position.set(1.5, 0.92, -1.5);
-    f.g.rotation.y = 0.68;
+    f.g.rotation.y = 0.3; // three-quarter to the camera, phone in hand
     s.add(f.g);
     this.farmer = f;
-    f.parts.armR.rotation.x = -1.25;
-    f.parts.armR.rotation.z = 0.25;
+    f.parts.armR.rotation.set(-0.35, 0, 0.12);
+    (f.parts.armR.userData.elbow as THREE.Group).rotation.x = -1.45;
+    f.parts.armL.rotation.set(-0.2, 0, -0.08);
+    (f.parts.armL.userData.elbow as THREE.Group).rotation.x = -0.25;
+    (f.parts.torso.children.find((c) => c instanceof THREE.Group) as THREE.Group).rotation.x = 0.14;
     this.phone = mesh(new THREE.BoxGeometry(0.075, 0.15, 0.012), new THREE.MeshStandardMaterial({ color: '#111', emissive: new THREE.Color('#ddff80'), emissiveIntensity: 0.2, roughness: 0.3 }), false);
-    this.phone.position.set(0, -0.56, -0.05);
-    this.phone.rotation.x = 1.2;
-    f.parts.armR.add(this.phone);
+    this.phone.position.set(0, -0.3, 0.035);
+    this.phone.rotation.x = 1.35;
+    (f.parts.armR.userData.elbow as THREE.Group).add(this.phone);
     for (let i = 0; i < 3; i++) {
       const r = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.018, 6, 48), new THREE.MeshBasicMaterial({ color: '#ddff80', transparent: true, opacity: 0, depthWrite: false }));
       r.rotation.x = Math.PI / 2;
@@ -1592,6 +1884,42 @@ export class DeltaWorld {
     this.arcs.paid = make(centre, home, 40, '#ddff80');
     this.arcs.returns = make(home, bank, 46, '#ffd36a');
     this.arcs.sell = make(centre, V(320, 4, 0), 50, '#9fe3ff');
+
+    // the 360 loop shown on the opening and closing views: farmer -> finance -> inputs -> advice ->
+    // market -> iFarmer Center -> back to the farmer, paid
+    const stops = [V(1.5, 3, -1.5), V(TOWN.x + 18, 9, TOWN.z + 22), V(BAZAAR.x + 2, 5, BAZAAR.z), V(80, 3, 44), V(CENTER.x + 16, 6, CENTER.z - 6), V(CENTER.x, 6, CENTER.z - 12)];
+    const pts: THREE.Vector3[] = [];
+    stops.forEach((p0, k) => {
+      const p1 = stops[(k + 1) % stops.length];
+      const len = p0.distanceTo(p1);
+      const mid = p0.clone().lerp(p1, 0.5).add(V(0, 6 + len * 0.16, 0));
+      const leg = new THREE.QuadraticBezierCurve3(p0, mid, p1);
+      const n = Math.max(6, Math.round(len / 6));
+      for (let j = 0; j < n; j++) pts.push(leg.getPoint(j / n));
+    });
+    const loop = new THREE.CatmullRomCurve3(pts, true, 'centripetal');
+    const lm = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: this.loopUni,
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+      fragmentShader: `uniform float uTime; uniform float uOpacity; uniform float uDraw; varying vec2 vUv;
+        void main(){
+          float drawn = step(vUv.x, uDraw);
+          float head = smoothstep(uDraw - 0.05, uDraw, vUv.x) * (1.0 - step(0.999, uDraw));
+          float s = fract(vUv.x * 5.0 - uTime * 0.05);
+          float pulse = smoothstep(0.0, 0.04, s) * (1.0 - smoothstep(0.04, 0.2, s));
+          float edge = 1.0 - abs(vUv.y - 0.5) * 2.0;
+          float a = drawn * uOpacity * (0.28 + 0.9 * pulse + 1.2 * head) * (0.35 + 0.65 * smoothstep(0.0, 0.6, edge));
+          gl_FragColor = vec4(vec3(0.8, 1.0, 0.35) * 1.25, a * 0.85);
+        }`,
+    });
+    const lmesh = new THREE.Mesh(new THREE.TubeGeometry(loop, 900, 0.4, 8, true), lm);
+    lmesh.frustumCulled = false;
+    this.scene.add(lmesh);
+    this.anchors.harvest = V(121, 2.6, 52);
+    this.anchors.highway = V(200, 5, 46);
   }
 
   /* ------------------------------ birds, smoke, satellite, drone */
@@ -1692,36 +2020,40 @@ export class DeltaWorld {
 
   private apply(p: number, time: number) {
     const { i, f, x } = this.beatAt(p);
-    // hold near each key, glide between
-    const e = smooth(0.2, 0.8, f);
-    const u = (i + e) / (this.ids.length - 1);
-    const pos = this.posCurve.getPoint(u, this.tmp);
-    const tgt = this.tgtCurve.getPoint(u, this.tmp2);
+    // hold at each key, then glide: the target slides across the ground while the camera keeps
+    // orbiting it, pulling back and rising a little on long moves, so every frame looks at something
+    const e = smoother(0.1, 0.9, f);
     const a = KEYS[this.ids[i]] ?? KEYS.intro;
     const b = KEYS[this.ids[i + 1]] ?? KEYS.intro;
-    // rise like a drone on long moves so the camera never skims through trees or roofs
-    const seg = a.pos.distanceTo(b.pos);
-    pos.y += Math.sin(e * Math.PI) * Math.min(45, seg * 0.28);
-    // gentle handheld drift
-    pos.x += Math.sin(time * 0.31) * 0.15;
-    pos.y += Math.sin(time * 0.23) * 0.1;
+    const tgt = this.tmp2.lerpVectors(a.t, b.t, e);
+    const travel = a.t.distanceTo(b.t);
+    const hop = Math.sin(Math.PI * e);
+    const orbitA = (a.orbit ?? 0) * Math.sin(time * 0.05);
+    const orbitB = (b.orbit ?? 0) * Math.sin(time * 0.05);
+    const bA = a.b + orbitA;
+    const bB = bA + wrapDeg(b.b + orbitB - bA);
+    const sway = Math.sin(time * 0.07) * 1.6 * (1 - hop);
+    const bear = THREE.MathUtils.degToRad(lerp(bA, bB, e) + sway);
+    const elev = THREE.MathUtils.degToRad(lerp(a.e, b.e, e) + hop * 9 * clamp01(travel / 60));
+    const dist = Math.exp(lerp(Math.log(a.d), Math.log(b.d), e)) + travel * 0.3 * hop;
+    const pos = this.tmp.set(Math.sin(bear) * Math.cos(elev), Math.sin(elev), Math.cos(bear) * Math.cos(elev)).multiplyScalar(dist).add(tgt);
+    pos.y = Math.max(pos.y, 1.4 + hop * Math.min(16, travel * 0.22));
+    // breathing, like a camera on a crane
+    pos.y += Math.sin(time * 0.23) * 0.06 * Math.min(1, dist / 10);
     this.camera.position.copy(pos);
     // leave room for the story on the left on wide screens
     const fwd = tgt.clone().sub(pos).normalize();
     const right = fwd.clone().cross(V(0, 1, 0)).normalize();
-    const dist = pos.distanceTo(tgt);
-    const shift = (this.aspect > 1.1 ? 0.2 : 0) * this.frameShift * dist;
+    const shift = (this.aspect > 1.1 ? lerp(a.s ?? 0.2, b.s ?? 0.2, e) : 0) * this.frameShift * dist;
     this.camera.lookAt(tgt.clone().addScaledVector(right, -shift));
 
-    // sun through the day
-    const elev = lerp(a.sun, b.sun, e);
-    const autoAz = (k: Key) => (k.az ?? THREE.MathUtils.radToDeg(Math.atan2(k.pos.x - k.target.x, k.pos.z - k.target.z)) + 38);
-    let azA = autoAz(a);
-    let azB = autoAz(b);
-    while (azB - azA > 180) azB -= 360;
-    while (azA - azB > 180) azB += 360;
+    // sun through the day: three-quarter light from the view unless a key fixes it
+    const sunElev = lerp(a.sun, b.sun, e);
+    const autoAz = (k: Key, orbit: number) => (k.az ?? k.b + orbit + 38);
+    const azA = autoAz(a, orbitA);
+    const azB = azA + wrapDeg(autoAz(b, orbitB) - azA);
     const az = lerp(azA, azB, e);
-    this.setSun(elev, az);
+    this.setSun(sunElev, az);
     const sunPos = tgt.clone().addScaledVector(this.sunDir, 260);
     this.sun.position.copy(sunPos);
     this.sun.target.position.copy(tgt);
@@ -1785,6 +2117,13 @@ export class DeltaWorld {
     arcAt('sell', 'dispatch', 0.2, 0.9);
     arcAt('paid', 'paid', 0.0, 0.6);
     arcAt('returns', 'returns', 0.0, 0.7);
+
+    // the 360 loop: drawn on arrival, shown on the opening and closing views
+    const introFade = 1 - smooth(0.04, 0.55, x);
+    const outroFade = smooth(0.05, 0.45, L('outro'));
+    this.loopUni.uOpacity.value = Math.max(introFade, outroFade);
+    this.loopUni.uDraw.value = Math.max(clamp01((time - 0.6) / 3.2), outroFade > 0.01 ? 1 : 0);
+    this.loopUni.uTime.value = time;
 
     // shop restocked when the van arrives
     const buyL = L('buy');
@@ -1933,7 +2272,11 @@ export class DeltaWorld {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
       if (!this.visible) return;
-      this.progress += (this.target - this.progress) * (1 - Math.exp(-dt * 4));
+      // critically damped spring: the camera eases into and out of every move
+      const k = 3.4;
+      this.vel += ((this.target - this.progress) * k * k - 2 * k * this.vel) * dt;
+      this.progress += this.vel * dt;
+      if (Math.abs(this.target - this.progress) < 1e-5 && Math.abs(this.vel) < 1e-5) this.progress = this.target;
       this.renderOnce();
       this.opts.onFrame?.(this);
     };

@@ -7,6 +7,7 @@ import { intro, outro, scenes } from '@/content/journey';
 import { metrics, headlineMetrics, METRICS_AS_OF } from '@/content/metrics';
 import { Channels, JourneyStatic } from './Journey';
 import { Phone } from './PhoneScreens';
+import { ServiceLoop } from './ServiceLoop';
 import type { DeltaWorld } from '@/three/delta';
 
 const N = beats.length;
@@ -19,14 +20,22 @@ const anchorFor: Record<string, string> = {
   card: 'shop',
   grow: 'field',
   grow2: 'sensor',
-  harvest: 'field',
+  harvest: 'harvest',
   collect: 'collect',
-  dispatch: 'collect',
+  dispatch: 'highway',
   center: 'center',
   paid: 'home',
   returns: 'town',
 };
 const services = scenes.filter((s) => s.id !== 'intro');
+// pins over the world on the opening and closing views: every service, in its place
+const pins: { anchor: string; label: string }[] = [
+  { anchor: 'home', label: 'The farmer' },
+  { anchor: 'town', label: 'Finance' },
+  { anchor: 'shop', label: 'Inputs' },
+  { anchor: 'field', label: 'Advice & insurance' },
+  { anchor: 'center', label: 'Market & iFarmer Center' },
+];
 const sceneById = (id: string) => scenes.find((s) => s.id === id);
 
 function canUseWebGL() {
@@ -53,6 +62,7 @@ function Story3DInner() {
   const sectionRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelRef = useRef<HTMLDivElement>(null);
+  const pinRefs = useRef<(HTMLDivElement | null)[]>([]);
   const worldRef = useRef<DeltaWorld | null>(null);
   const beatRef = useRef(0);
   const [beat, setBeat] = useState(0);
@@ -96,6 +106,22 @@ function Story3DInner() {
               beatRef.current = idx;
               setBeat(idx);
             }
+            // service pins on the opening and closing views
+            const pinFade = Math.max(1 - Math.min(1, x * 2.4), Math.min(1, Math.max(0, (x - (N - 1.6)) * 2)));
+            pins.forEach((pin, k) => {
+              const pe = pinRefs.current[k];
+              if (!pe) return;
+              w.screen(pin.anchor, pos);
+              const vw = w.renderer.domElement.clientWidth;
+              const covered = vw >= 1024 && pos.x < vw * 0.49;
+              const show = pinFade > 0.01 && pos.visible && !covered && pos.y > 90;
+              pe.style.opacity = show ? String(pinFade) : '0';
+              if (show) {
+                const half = pe.offsetWidth / 2;
+                const px = Math.min(Math.max(pos.x, half + 8), vw - half - 8);
+                pe.style.transform = `translate3d(${px}px, ${pos.y}px, 0) translate(-50%, -100%)`;
+              }
+            });
             const el = labelRef.current;
             if (!el) return;
             const a = anchorFor[beats[idx].id];
@@ -170,6 +196,16 @@ function Story3DInner() {
           <div className="mx-auto h-6 w-px bg-white/80" />
         </div>
 
+        {pins.map((pin, k) => (
+          <div key={pin.anchor} ref={(el) => { pinRefs.current[k] = el; }} className="pointer-events-none absolute left-0 top-0 z-10 opacity-0 transition-opacity duration-300" aria-hidden>
+            <div className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/90 py-1 pl-1.5 pr-3 text-[0.8rem] font-bold text-ink shadow-[0_8px_24px_-10px_rgba(2,43,54,0.55)] lg:text-[0.86rem]">
+              <span className="h-2 w-2 rounded-full bg-leaf ring-[3px] ring-leaf/30" />
+              {pin.label}
+            </div>
+            <div className="mx-auto h-4 w-px bg-white/80" />
+          </div>
+        ))}
+
         {/* bottom shade for the story titles */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-[46%] bg-gradient-to-t from-[rgba(2,30,36,0.82)] via-[rgba(2,30,36,0.35)] to-transparent" />
 
@@ -178,10 +214,14 @@ function Story3DInner() {
           <div className="flex h-full items-center gap-7 pl-10 pr-14 xl:gap-10 xl:pl-14">
             <div className="min-w-0 flex-1">
               {isIntro ? (
-                <div className="lower-third">
-                  <h1 className="text-[clamp(2.6rem,4.6vw,4.4rem)] font-bold leading-[1.02] tracking-[-0.035em] text-ink">{intro.title}</h1>
-                  <p className="mt-5 max-w-[30rem] text-lead text-ink-soft">{intro.body}</p>
-                  <div className="mt-7 flex flex-wrap gap-3">
+                <div className="lower-third max-w-[38rem]">
+                  <h1 className="text-[clamp(2.4rem,3.9vw,3.8rem)] font-bold leading-[1.03] tracking-[-0.035em] text-ink">{intro.title}</h1>
+                  <p className="mt-4 max-w-[32rem] text-[1.08rem] leading-relaxed text-ink-soft">{intro.body}</p>
+                  <p className="mt-7 text-[0.95rem] font-bold text-field">Every service, from financing to payout</p>
+                  <div className="mt-3">
+                    <ServiceLoop onPick={goTo} />
+                  </div>
+                  <div className="mt-7 flex flex-wrap items-center gap-3">
                     <button type="button" onClick={() => goTo('finance')} className="btn-primary">
                       Follow a season
                     </button>
@@ -189,7 +229,6 @@ function Story3DInner() {
                       Find your path
                     </Link>
                   </div>
-                  <p className="mt-10 text-sm font-semibold text-ink-mute">Scroll to fly through the delta</p>
                 </div>
               ) : (
                 <div>
@@ -228,7 +267,7 @@ function Story3DInner() {
                 </div>
               )}
             </div>
-            <div className="w-[clamp(196px,16vw,250px)] shrink-0">
+            <div className={`w-[clamp(196px,16vw,250px)] shrink-0 ${isIntro ? 'hidden' : ''}`}>
               <p key={'a' + b.app} className="lower-third mb-3 flex items-center justify-center gap-2 text-[0.92rem] font-bold text-ink">
                 <span className="h-2 w-2 rounded-full bg-leaf ring-4 ring-leaf/25" aria-hidden />
                 {b.app}
@@ -245,8 +284,12 @@ function Story3DInner() {
         <div className="absolute inset-x-0 bottom-0 z-20 p-5 pb-7 text-white lg:left-[47%] lg:p-10 lg:pb-12">
           {isIntro && (
             <div className="lower-third max-w-[34rem] lg:hidden">
-              <h1 className="text-[2.3rem] font-bold leading-[1.05] tracking-tight text-white">{intro.title}</h1>
-              <p className="mt-3 text-white/85">{intro.body}</p>
+              <h1 className="text-[2.15rem] font-bold leading-[1.05] tracking-tight text-white">{intro.title}</h1>
+              <p className="mt-2.5 text-[0.95rem] text-white/85">{intro.body}</p>
+              <p className="mt-4 text-sm font-bold text-lime">Every service, from financing to payout</p>
+              <div className="mt-2">
+                <ServiceLoop onPick={goTo} compact />
+              </div>
             </div>
           )}
           {!isIntro && !isOutro && scene && (
@@ -282,7 +325,7 @@ function Story3DInner() {
         </div>
 
         {/* mobile phone */}
-        <div className="pointer-events-none absolute right-3 top-[calc(var(--header-h)+12px)] z-20 w-[108px] lg:hidden" aria-hidden>
+        <div className={`pointer-events-none absolute right-3 top-[calc(var(--header-h)+12px)] z-20 w-[108px] lg:hidden ${isIntro || isOutro ? 'hidden' : ''}`} aria-hidden>
           <Phone screen={b.screen} />
         </div>
         </>)}

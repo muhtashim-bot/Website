@@ -3,6 +3,7 @@ import type { Page } from '@/content/offerings';
 import { pageBySlug } from '@/content/offerings';
 import { ch } from '@/content/journey';
 import { Channels } from './Journey';
+import { Walkthrough } from './Walkthrough';
 import { AIModuleCard, BlockView, CTABand, FAQList, GooglePlay, MetricRow, Section, SectionHead, SmartLink } from './ui';
 
 const kindLabel: Record<Page['kind'], string> = { service: 'Service', product: 'Solution', audience: 'For you' };
@@ -78,6 +79,8 @@ export function OfferingPage({ page }: { page: Page }) {
           </div>
         </section>
       )}
+
+      {page.walkthrough && <Walkthrough name={page.name} data={page.walkthrough} />}
 
       {page.blocks.map((b, i) => (
         <Section key={b.title} tone={i % 2 === 1 ? 'cream' : 'plain'}>

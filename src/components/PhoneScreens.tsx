@@ -398,6 +398,138 @@ const screens: Record<string, () => ReactNode> = {
       </Body>
     </>
   ),
+  'krishop-credit': () => (
+    <>
+      <Bar app="KriShop" title="Buy now, pay later" />
+      <Body>
+        <div className="rounded-2xl p-3.5" style={{ background: TEAL, color: '#fff' }}>
+          <p className="text-[10px] font-bold opacity-80">Input credit</p>
+          <div className="mt-2 space-y-1.5">
+            <Skel w="60%" h={10} c="rgba(221,255,128,0.85)" />
+            <Skel w="40%" h={6} c="rgba(255,255,255,0.3)" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2 rounded-xl bg-white p-2.5 text-[12px] font-bold ring-1 ring-black/[0.06]">
+          <Check /> Instant decision
+        </div>
+        <p className="text-[10px] font-bold text-[#6B786E]">Repay in</p>
+        <div className="flex rounded-full bg-white p-0.5 text-[11px] font-bold ring-1 ring-black/[0.07]">
+          {['30 days', '60 days', '90 days'].map((t) => (
+            <span key={t} className="flex-1 rounded-full py-1.5 text-center" style={t === '60 days' ? { background: TEAL, color: LIME } : { color: '#4A5A4E' }}>
+              {t}
+            </span>
+          ))}
+        </div>
+        <Btn tone="dark">Use credit for this order</Btn>
+      </Body>
+    </>
+  ),
+  'krishop-ledger': () => (
+    <>
+      <Bar app="KriShop" title="Lenden: your shop's book" />
+      <Body>
+        <div className="grid grid-cols-2 gap-2">
+          {['Sales today', 'Due to collect'].map((t, i) => (
+            <div key={t} className="rounded-xl bg-white p-2.5 ring-1 ring-black/[0.06]">
+              <p className="text-[9.5px] font-semibold text-[#6B786E]">{t}</p>
+              <Skel w={i ? '55%' : '70%'} h={9} c={i ? '#F2C9A0' : '#CFE3B0'} />
+            </div>
+          ))}
+        </div>
+        {['RK', 'MA', 'SH'].map((ini, i) => (
+          <div key={ini} className="flex items-center gap-2.5 rounded-xl bg-white p-2 ring-1 ring-black/[0.06]">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold" style={{ background: '#EEF6E2', color: G }}>
+              {ini}
+            </span>
+            <span className="flex-1 space-y-1">
+              <Skel w="65%" h={6} c="#CFD8CA" />
+              <Skel w="40%" h={5} />
+            </span>
+            <span className="rounded-full px-2 py-0.5 text-[9px] font-bold" style={i === 0 ? { background: LIME, color: TEAL } : { background: '#FBE9DA', color: '#8A4B12' }}>
+              {i === 0 ? 'Reminder sent' : 'Due'}
+            </span>
+          </div>
+        ))}
+        <p className="text-[10px] font-semibold text-[#6B786E]">Works offline. SMS reminders go to customers with unpaid balances.</p>
+        <Btn tone="dark">Add entry</Btn>
+      </Body>
+    </>
+  ),
+  'sofol-visits': () => (
+    <>
+      <Bar app="Sofol" title="Farm visit" />
+      <Body>
+        <Thumb photo="advisory-field" h={104} pos="50% 60%" />
+        {['Crop stage recorded', 'Photos uploaded', 'Transaction logged'].map((t) => (
+          <div key={t} className="flex items-center justify-between rounded-xl bg-white px-3 py-2.5 text-[12px] font-bold ring-1 ring-black/[0.06]">
+            {t} <Check />
+          </div>
+        ))}
+        <Field label="Next visit" value="In two weeks" />
+        <Btn>Save visit</Btn>
+      </Body>
+    </>
+  ),
+  'iharvst-updates': () => (
+    <>
+      <Bar app="iHarvst" title="Season updates" />
+      <Body>
+        <Thumb photo="seed-farmer" h={96} pos="60% 45%" />
+        <div className="rounded-2xl bg-white p-3.5 ring-1 ring-black/[0.06]">
+          <Steps items={['Land prepared', 'Seeds sown', 'Crop flowering', 'Harvest and sale']} at={2} />
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {['Insured', 'Photos from the field'].map((t) => (
+            <span key={t} className="rounded-full bg-[#EEF6E2] px-2 py-0.5 text-[9.5px] font-bold text-[#038F2F]">{t}</span>
+          ))}
+        </div>
+        <Btn>See all updates</Btn>
+      </Body>
+    </>
+  ),
+  'machine-catalog': () => (
+    <>
+      <Bar app="Farmer Card" title="Machines you can finance" />
+      <Body>
+        {['Power tiller', 'Rice reaper', 'Power sprayer'].map((t, i) => (
+          <div key={t} className="flex items-center gap-2.5 rounded-xl bg-white p-2.5 ring-1 ring-black/[0.06]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg" style={{ background: i === 1 ? LIME : '#EEF6E2' }}>
+              <svg width="22" height="16" viewBox="0 0 22 16" aria-hidden>
+                <rect x="2" y="3" width="12" height="7" rx="2" fill={TEAL} opacity="0.85" />
+                <circle cx="5" cy="12.5" r="2.8" fill={TEAL} />
+                <circle cx="16" cy="11.5" r="3.8" fill={TEAL} />
+              </svg>
+            </span>
+            <span className="flex-1">
+              <span className="block text-[12px] font-bold">{t}</span>
+              <span className="text-[9.5px] font-semibold text-[#6B786E]">Try it at an Experience Center</span>
+            </span>
+          </div>
+        ))}
+        <Btn>Book a demo</Btn>
+      </Body>
+    </>
+  ),
+  'machine-emi': () => (
+    <>
+      <Bar app="Farmer Card" title="Pay in instalments" />
+      <Body>
+        <Field label="Machine" value="Rice reaper" />
+        <p className="text-[10px] font-bold text-[#6B786E]">Pay over</p>
+        <div className="grid grid-cols-4 gap-1 text-[11px] font-bold">
+          {['4', '6', '9', '12'].map((t) => (
+            <span key={t} className="rounded-lg py-2 text-center ring-1 ring-black/[0.06]" style={t === '6' ? { background: G, color: '#fff' } : { background: '#fff', color: '#4A5A4E' }}>
+              {t} mo
+            </span>
+          ))}
+        </div>
+        <div className="rounded-2xl bg-white p-3.5 ring-1 ring-black/[0.06]">
+          <Steps items={['Machine chosen', 'Instalment plan', 'Training booked', 'After-sales service']} at={1} />
+        </div>
+        <Btn>Request instalments</Btn>
+      </Body>
+    </>
+  ),
   'folon-paid': () => (
     <>
       <Bar app="Folon" title="Harvest sold" />
@@ -446,7 +578,8 @@ export function Phone({ screen, className = '' }: { screen: string; className?: 
   }, []);
   return (
     <div ref={box} className={`relative aspect-[300/632] ${className}`}>
-      <div style={{ width: 300, height: 632, zoom: k }}>
+      {/* drawn at 300 x 632 and zoomed to the box; absolute so the drawing never sizes the box */}
+      <div className="absolute left-0 top-0" style={{ width: 300, height: 632, zoom: k }}>
         <div className="relative h-full w-full rounded-[2.9rem] bg-[#0E1512] p-[10px] shadow-[0_40px_80px_-30px_rgba(2,43,54,0.55),inset_0_0_0_1.5px_rgba(255,255,255,0.08)]">
           <div className="relative flex h-full flex-col overflow-hidden rounded-[2.35rem] bg-[#F5F7F1] font-sans text-[#1B2A1F]">
             <div className="absolute left-1/2 top-2 z-20 h-[20px] w-[82px] -translate-x-1/2 rounded-full bg-[#0E1512]" aria-hidden />
