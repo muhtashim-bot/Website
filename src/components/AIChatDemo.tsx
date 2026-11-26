@@ -81,7 +81,7 @@ export function AIChatDemo() {
   return (
     <figure className="relative">
       <div aria-hidden className="absolute -inset-6 rounded-[2.5rem] bg-[radial-gradient(60%_60%_at_60%_40%,rgba(221,255,128,0.14),transparent)]" />
-      <div className="relative overflow-hidden rounded-[1.75rem] bg-[#06323c] ring-1 ring-white/10 shadow-[0_40px_80px_-40px_rgba(0,0,0,0.7)]">
+      <div className="relative overflow-hidden rounded-[1.75rem] bg-[#06323c] ring-1 ring-lime/20 shadow-[0_40px_90px_-30px_rgba(0,0,0,0.8),0_0_0_6px_rgba(221,255,128,0.04)]">
         {/* header */}
         <div className="flex items-center gap-3 border-b border-white/10 px-5 py-3.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-lime text-[0.72rem] font-bold text-teal">AI</span>

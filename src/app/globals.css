@@ -151,8 +151,15 @@
   50% { transform: scaleY(1); }
 }
 .ai-wave { animation: aiWave 0.7s ease-in-out infinite; transform-origin: center; }
+/* the AI page's aurora: two soft lights drifting under the land */
+@keyframes aurora {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-7%, 5%, 0) scale(1.14); }
+}
+.ai-aurora-a { animation: aurora 17s ease-in-out infinite alternate; }
+.ai-aurora-b { animation: aurora 23s ease-in-out -9s infinite alternate-reverse; }
 @media (prefers-reduced-motion: reduce) {
-  .ai-in, .ai-wave { animation: none; }
+  .ai-in, .ai-wave, .ai-aurora-a, .ai-aurora-b { animation: none; }
 }
 .hero-rise { animation: lowerThird 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 

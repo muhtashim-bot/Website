@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { aiFlow, aiFlowIntro, aiHero, capabilities, folonAI, profileInputs, responsibleAI, voiceAI, voiceWalk, workWithUs } from '@/content/ai';
 import { FolonModes } from '@/components/AIInteractive';
 import { AIChatDemo } from '@/components/AIChatDemo';
+import { FieldIntelligence } from '@/components/FieldIntelligence';
 import { Walkthrough } from '@/components/Walkthrough';
 import { Section, SectionHead, SmartLink, StatusTag } from '@/components/ui';
 
@@ -25,12 +26,18 @@ const anchors = [
 export default function AIPage() {
   return (
     <>
-      <section className="relative overflow-hidden bg-teal text-white">
-        <div aria-hidden className="absolute -right-40 -top-40 h-[640px] w-[640px] rounded-full border border-lime/20" />
-        <div aria-hidden className="absolute -right-20 -top-20 h-[440px] w-[440px] rounded-full border border-lime/25" />
-        <div aria-hidden className="absolute right-10 top-10 h-[240px] w-[240px] rounded-full bg-lime/10" />
+      <section className="relative isolate overflow-hidden bg-[#01232C] text-white">
+        {/* a slow aurora under the land, then the land being read, then shade behind the words */}
+        <div aria-hidden className="ai-aurora-a absolute -right-[12%] -top-[30%] h-[110%] w-[70%] rounded-full bg-[radial-gradient(closest-side,rgba(221,255,128,0.2),rgba(221,255,128,0))]" />
+        <div aria-hidden className="ai-aurora-b absolute -bottom-[40%] left-[18%] h-[100%] w-[60%] rounded-full bg-[radial-gradient(closest-side,rgba(3,143,47,0.42),rgba(3,143,47,0))]" />
+        <FieldIntelligence />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(1,35,44,0.8)_0%,rgba(1,35,44,0.64)_50%,rgba(1,35,44,0.38)_100%)] lg:bg-[linear-gradient(90deg,rgba(1,35,44,0.9)_0%,rgba(1,35,44,0.74)_36%,rgba(1,35,44,0.28)_50%,rgba(1,35,44,0)_60%)]"
+        />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#01232C] to-transparent" />
         <div className="container relative grid items-center gap-12 py-16 md:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
-          <div>
+          <div data-ai-avoid>
             <p className="text-sm font-semibold text-lime">AI & Data Intelligence</p>
             <h1 className="mt-3 text-h1 text-white">{aiHero.title}</h1>
             <p className="mt-6 text-lead text-white/80">{aiHero.body}</p>
@@ -39,8 +46,11 @@ export default function AIPage() {
               <Link href="/contact/?topic=partner" className="btn-on-dark">Partner with us</Link>
             </div>
           </div>
-          <AIChatDemo />
+          <div data-ai-avoid data-ai-node>
+            <AIChatDemo />
+          </div>
         </div>
+        <p className="absolute bottom-3 right-4 text-[0.72rem] font-semibold text-white/40 md:right-6">Illustration: farm plots read from satellite and field data</p>
       </section>
 
       <nav aria-label="On this page" className="sticky top-[var(--header-h)] z-30 hidden border-b border-ink/[0.06] bg-[#FFFDF5]/90 backdrop-blur md:block">
