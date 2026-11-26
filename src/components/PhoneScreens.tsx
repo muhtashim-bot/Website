@@ -43,18 +43,27 @@ function Bar({ app, title }: { app: string; title: string }) {
   );
 }
 
+// a light passes over the placeholder lines as the screen arrives
 const Skel = ({ w = '100%', h = 7, c = '#E6ECE2' }: { w?: string; h?: number; c?: string }) => (
-  <span className="block rounded-full" style={{ width: w, height: h, background: c }} />
+  <span
+    className="phone-skel block rounded-full"
+    style={{ width: w, height: h, backgroundColor: c, backgroundImage: 'linear-gradient(90deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.65) 50%, rgba(255,255,255,0) 70%)' }}
+  />
 );
-const Field = ({ label, value }: { label: string; value: string }) => (
-  <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-black/[0.07]">
+const Caret = () => <span aria-hidden className="phone-caret ml-0.5 inline-block h-[13px] w-[1.5px] rounded-full align-[-2px]" style={{ background: G }} />;
+/** `typing` marks the field being filled in, with a blinking caret. */
+const Field = ({ label, value, typing = false }: { label: string; value: string; typing?: boolean }) => (
+  <div className={`rounded-xl bg-white px-3 py-2 ring-1 ${typing ? 'ring-[#88BB41]' : 'ring-black/[0.07]'}`}>
     <span className="block text-[9.5px] font-semibold text-[#6B786E]">{label}</span>
-    <span className="block text-[12.5px] font-bold text-[#1B2A1F]">{value}</span>
+    <span className="block text-[12.5px] font-bold text-[#1B2A1F]">
+      {value}
+      {typing && <Caret />}
+    </span>
   </div>
 );
 const Btn = ({ children, tone = 'g' }: { children: ReactNode; tone?: 'g' | 'lime' | 'dark' }) => (
   <div
-    className="mt-auto rounded-full py-2.5 text-center text-[12.5px] font-bold"
+    className="phone-cta mt-auto rounded-full py-2.5 text-center text-[12.5px] font-bold"
     style={{ background: tone === 'g' ? G : tone === 'lime' ? LIME : TEAL, color: tone === 'lime' ? TEAL : '#fff' }}
   >
     {children}
@@ -73,14 +82,14 @@ const Steps = ({ items, at }: { items: string[]; at: number }) => (
   <ul className="space-y-2.5">
     {items.map((t, i) => (
       <li key={t} className="flex items-center gap-2.5 text-[12px] font-semibold" style={{ color: i <= at ? '#1B2A1F' : '#9AA59C' }}>
-        {i < at ? <Check /> : i === at ? <span className="h-5 w-5 shrink-0 rounded-full border-[3px]" style={{ borderColor: G, background: LIME }} /> : <Check on={false} />}
+        {i < at ? <Check /> : i === at ? <span className="phone-now h-5 w-5 shrink-0 rounded-full border-[3px]" style={{ borderColor: G, background: LIME }} /> : <Check on={false} />}
         {t}
       </li>
     ))}
   </ul>
 );
 const Body = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
-  <div className={`flex flex-1 flex-col gap-2.5 bg-[#F5F7F1] p-3.5 ${className}`}>{children}</div>
+  <div className={`phone-build flex flex-1 flex-col gap-2.5 bg-[#F5F7F1] p-3.5 ${className}`}>{children}</div>
 );
 const Thumb = ({ photo, h = 92, pos = '50% 50%' }: { photo: string; h?: number; pos?: string }) => (
   // eslint-disable-next-line @next/next/no-img-element
@@ -100,7 +109,7 @@ const Call = ({ title, bn, en, children }: { title: string; bn: string; en: stri
           </span>
           <span className="ml-auto flex h-3 items-center gap-[2px]" aria-hidden>
             {[5, 9, 6, 11, 7, 10, 5].map((h, i) => (
-              <span key={i} className="w-[2px] rounded-full" style={{ height: h, background: LIME, opacity: 0.8 }} />
+              <span key={i} className="phone-wave w-[2px] rounded-full" style={{ ['--h' as string]: `${h}px`, height: h, background: LIME, opacity: 0.8, animationDelay: `${(i % 4) * -0.2}s` }} />
             ))}
           </span>
         </div>
@@ -191,7 +200,7 @@ const screens: Record<string, () => ReactNode> = {
         <p className="text-[34px] font-bold leading-none">iFarmer</p>
         <p className="mt-1 text-[11px] font-semibold opacity-80">One season, five apps</p>
       </div>
-      <div className="relative mt-auto grid grid-cols-3 gap-y-4 px-3 pb-6">
+      <div className="phone-build relative mt-auto grid grid-cols-3 gap-y-4 px-3 pb-6">
         {['Folon', 'Folon-AI', 'KriShop', 'iHarvst', 'Sofol', 'Supplier Connect'].map((k) => (
           <div key={k} className="flex flex-col items-center gap-1">
             <span className="flex h-11 w-11 items-center justify-center rounded-[14px] text-[12px] font-bold shadow-lg" style={{ background: apps[k].bg, color: apps[k].fg }}>
@@ -209,13 +218,15 @@ const screens: Record<string, () => ReactNode> = {
       <Body>
         <div className="flex gap-1">
           {[1, 1, 1, 0].map((on, i) => (
-            <span key={i} className="h-1.5 flex-1 rounded-full" style={{ background: on ? LEAF : '#DDE4D8' }} />
+            <span key={i} className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#DDE4D8]">
+              {on ? <span className="phone-fill block h-full w-full rounded-full" style={{ background: LEAF, animationDelay: `${0.2 + i * 0.25}s` }} /> : null}
+            </span>
           ))}
         </div>
         <Field label="Crop" value="Maize" />
         <Field label="Land" value="1.5 acres" />
         <Field label="What you need" value="Seed, fertilizer, labour" />
-        <Field label="Repayment" value="At harvest" />
+        <Field label="Repayment" value="At harvest" typing />
         <p className="text-[10px] font-semibold text-[#6B786E]">No collateral needed. A facilitator can help you apply.</p>
         <Btn>Submit application</Btn>
       </Body>
@@ -253,7 +264,7 @@ const screens: Record<string, () => ReactNode> = {
           </div>
           <p className="mt-2 text-[9.5px] font-semibold text-[#6B786E]">Funding progress</p>
           <span className="mt-1 block h-1.5 rounded-full bg-[#E1E7DD]">
-            <span className="block h-full w-[62%] rounded-full" style={{ background: LEAF }} />
+            <span className="phone-fill block h-full w-[62%] rounded-full" style={{ background: LEAF, animationDelay: '0.5s' }} />
           </span>
         </div>
         <div className="rounded-2xl bg-white p-2.5 opacity-70 ring-1 ring-black/[0.06]">
@@ -352,7 +363,9 @@ const screens: Record<string, () => ReactNode> = {
           <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-bold" style={{ background: LIME, color: TEAL }}>Agronomist can follow up</span>
         </div>
         <div className="mt-auto flex items-center gap-2 rounded-full bg-white px-3 py-2 ring-1 ring-black/[0.07]">
-          <span className="flex-1 text-[10.5px] text-[#9AA59C]">Ask in Bangla</span>
+          <span className="flex-1 text-[10.5px] text-[#9AA59C]">
+            <Caret /> Ask in Bangla
+          </span>
           <span className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: TEAL }}>
             <svg width="10" height="13" viewBox="0 0 10 13" aria-hidden>
               <rect x="3" y="0.5" width="4" height="8" rx="2" fill={LIME} />
@@ -401,7 +414,7 @@ const screens: Record<string, () => ReactNode> = {
           <Field label="Grade" value="A" />
         </div>
         <Field label="Ready from" value="Next week" />
-        <Field label="Your price" value="Per kg, negotiable" />
+        <Field label="Your price" value="Per kg, negotiable" typing />
         <Btn>Share with iFarmer</Btn>
       </Body>
     </>

@@ -128,7 +128,7 @@ export function StoryVideo() {
         <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-7 text-white lg:hidden">
           {!isOutro && (
             <div className={`absolute inset-x-0 bottom-0 px-4 pb-7 ${beat === 0 ? '' : 'pointer-events-none'}`} style={{ opacity: 'calc(1 - var(--t) * 2)' }}>
-              <div className="mx-auto w-[min(88vw,380px)]" style={{ transform: 'translateX(calc(var(--t) * 30vw)) scale(calc(1 + var(--t) * 0.6))' }}>
+              <div className="mx-auto w-[min(94vw,420px,calc(100svh-370px))]" style={{ transform: 'translateX(calc(var(--t) * 30vw)) scale(calc(1 + var(--t) * 0.6))' }}>
                 <ServiceWheel onPick={goTo} compact dark>
                   <div className="flex aspect-square w-full flex-col items-center justify-center rounded-full bg-[rgba(2,30,36,0.55)] px-4">
                     <span className="text-[1.05rem] font-bold leading-tight text-white">The farmer</span>
@@ -200,7 +200,7 @@ function IntroStage({ onPick }: { onPick: (scene: string) => void }) {
   return (
     <div className="relative -ml-[clamp(0rem,1.5vw,2rem)] flex h-[min(calc(100svh-var(--header-h)-24px),720px)] items-center gap-[clamp(1.5rem,2.8vw,3rem)]">
       <div
-        className="w-[min(calc((100svh-var(--header-h))*0.86),40vw,640px)] shrink-0"
+        className="w-[min(calc((100svh-var(--header-h))*0.95),44vw,720px)] shrink-0"
         style={{ transform: 'translateX(calc(var(--t) * 36vw)) scale(calc(1 + var(--t) * 0.9))', opacity: 'calc(1 - var(--t) * 1.7)' }}
       >
         <div className="lower-third">

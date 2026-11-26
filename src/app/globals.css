@@ -82,6 +82,57 @@
   to { opacity: 1; }
 }
 .wheel-stop { animation: fadeIn 0.35s ease-out both; animation-delay: calc(0.15s + var(--k) * 50ms); }
+/* the wheel's resonance: a ring born at the centre that widens and fades out */
+@keyframes wheelRipple {
+  0% { transform: scale(0.06); opacity: 0; }
+  12% { opacity: 0.9; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.wheel-ripple { animation: wheelRipple 7.2s cubic-bezier(0.25, 0.6, 0.35, 1) infinite backwards; }
+
+/* Inside the phone: opacity, width and colour only, never transform (see screenIn). */
+.phone-build > * { animation: fadeIn 0.38s ease-out backwards; }
+.phone-build > :nth-child(2) { animation-delay: 0.09s; }
+.phone-build > :nth-child(3) { animation-delay: 0.18s; }
+.phone-build > :nth-child(4) { animation-delay: 0.27s; }
+.phone-build > :nth-child(5) { animation-delay: 0.36s; }
+.phone-build > :nth-child(6) { animation-delay: 0.45s; }
+.phone-build > :nth-child(7) { animation-delay: 0.54s; }
+.phone-build > :nth-child(n + 8) { animation-delay: 0.62s; }
+@keyframes ctaGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(136, 187, 65, 0); }
+  50% { box-shadow: 0 0 0 5px rgba(136, 187, 65, 0.28), 0 0 18px 2px rgba(221, 255, 128, 0.55); }
+}
+.phone-build > .phone-cta { animation: fadeIn 0.38s ease-out 0.5s backwards, ctaGlow 2.4s ease-in-out 1.1s infinite; }
+/* no `to`: the bar grows to whatever width it is given */
+@keyframes phoneFill {
+  from { width: 0; }
+}
+.phone-fill { animation: phoneFill 0.8s cubic-bezier(0.3, 0.7, 0.3, 1) 0.25s backwards; }
+@keyframes nowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(136, 187, 65, 0.55); }
+  60% { box-shadow: 0 0 0 6px rgba(136, 187, 65, 0); }
+}
+.phone-now { animation: nowPulse 1.8s ease-out 0.6s infinite; }
+@keyframes shimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -20% 0; }
+}
+.phone-skel { background-size: 250% 100%; background-repeat: no-repeat; animation: shimmer 1.3s linear 0.35s 2 backwards; }
+@keyframes voiceBar {
+  0%, 100% { height: calc(var(--h) * 0.4); }
+  50% { height: var(--h); }
+}
+.phone-wave { animation: voiceBar 0.8s ease-in-out infinite; }
+@keyframes caret {
+  0%, 45% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.phone-caret { animation: caret 1s steps(1) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .wheel-ripple, .phone-cta, .phone-now, .phone-skel, .phone-wave, .phone-caret { animation: none !important; }
+  .phone-build > *, .phone-fill { animation-delay: 0s !important; }
+}
 .wt-step { opacity: 0; transform: translateY(18px); transition: opacity 0.28s ease-out, transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .wt-step.is-placed { opacity: 0.55; transform: none; }
 .wt-step.is-active { opacity: 1; }

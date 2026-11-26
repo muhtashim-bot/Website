@@ -2,8 +2,8 @@
 
 /*
  * The opening statement of the homepage: the farmer at the centre, every iFarmer service around
- * them, from finance to payout and round again to the next season. A light circles the ring and
- * lights each service as it passes.
+ * them, from finance to payout and round again to the next season. A soft light sweeps the ring and
+ * each service glows as it passes, while rings resonate out from the farmer at the centre.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
@@ -21,86 +21,102 @@ export const wheelStops: WheelStop[] = [
 ];
 
 const R = 38; // ring radius, in % of the wheel
-const PERIOD = 28; // seconds for the light to go round once
+const PERIOD = 28; // seconds for the light to sweep round once
+const N = wheelStops.length;
+const STEP = 360 / N;
 // rounded so the server and the browser print identical coordinates
 const f = (n: number) => Math.round(n * 1000) / 1000;
-const N = wheelStops.length;
-const CIRC = 2 * Math.PI * R;
 
 export function ServiceWheel({ onPick, compact = false, dark = false, children }: { onPick?: (scene: string) => void; compact?: boolean; dark?: boolean; children?: ReactNode }) {
-  const dot = useRef<SVGCircleElement>(null);
-  const trail = useRef<SVGCircleElement>(null);
+  const sweep = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
 
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    let raf = 0;
-    let last = -1;
-    const t0 = performance.now();
-    const tick = (now: number) => {
-      raf = requestAnimationFrame(tick);
-      const deg = (((now - t0) / 1000 / PERIOD) * 360) % 360; // 0 = top, clockwise
-      const rad = ((deg - 90) * Math.PI) / 180;
-      dot.current?.setAttribute('cx', String(50 + R * Math.cos(rad)));
-      dot.current?.setAttribute('cy', String(50 + R * Math.sin(rad)));
-      trail.current?.setAttribute('transform', `rotate(${deg - 90 - 70} 50 50)`);
-      const k = Math.round(deg / (360 / N)) % N;
-      if (k !== last) {
-        last = k;
-        setActive(k);
-      }
+    const el = sweep.current;
+    if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // the sweep turns on the compositor; the timer only reads where it is to light the right service
+    const spin = el.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }], { duration: PERIOD * 1000, iterations: Infinity });
+    const id = window.setInterval(() => {
+      const deg = ((Number(spin.currentTime ?? 0) / 1000 / PERIOD) * 360) % 360;
+      setActive(Math.floor((deg + 12) / STEP) % N);
+    }, 150);
+    return () => {
+      window.clearInterval(id);
+      spin.cancel();
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
   }, []);
+
+  const v = dark ? 'd' : 'l'; // separate ids, so a hidden copy of the wheel never owns the visible one's gradients
+  const head = dark ? '#DDFF80' : '#5E9F2A';
+  const glow = dark ? '#DDFF80' : '#9BD14A';
 
   return (
     <div className="relative aspect-square w-full">
+      {/* resonance: rings born at the farmer that widen and fade before they reach the services */}
+      <div aria-hidden className="absolute inset-[12%] motion-reduce:hidden">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className={`wheel-ripple absolute inset-0 rounded-full border ${
+              dark
+                ? 'border-lime/50 bg-[radial-gradient(circle,rgba(221,255,128,0)_58%,rgba(221,255,128,0.16)_100%)]'
+                : 'border-leaf/55 bg-[radial-gradient(circle,rgba(221,255,128,0)_58%,rgba(221,255,128,0.3)_100%)]'
+            }`}
+            style={{ animationDelay: `${i * 2.4}s` }}
+          />
+        ))}
+      </div>
+      <div
+        aria-hidden
+        className={`absolute inset-[24%] rounded-full ${dark ? 'bg-[radial-gradient(circle,rgba(221,255,128,0.18),rgba(221,255,128,0)_70%)]' : 'bg-[radial-gradient(circle,rgba(221,255,128,0.55),rgba(221,255,128,0)_70%)]'}`}
+      />
+
       <svg aria-hidden viewBox="0 0 100 100" className="absolute inset-0 h-full w-full overflow-visible">
-        <defs>
-          <linearGradient id="wheel-trail" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#DDFF80" stopOpacity="0" />
-            <stop offset="1" stopColor="#DDFF80" stopOpacity="1" />
-          </linearGradient>
-        </defs>
-        <circle cx="50" cy="50" r={R + 6.5} fill="none" stroke={dark ? 'rgba(255,255,255,0.1)' : 'rgba(94,133,43,0.12)'} strokeWidth="0.4" />
-        <circle cx="50" cy="50" r={R} fill="none" stroke={dark ? 'rgba(221,255,128,0.35)' : 'rgba(136,187,65,0.45)'} strokeWidth="0.9" />
-        {/* the lit arc behind the travelling light */}
-        <circle
-          ref={trail}
-          cx="50"
-          cy="50"
-          r={R}
-          fill="none"
-          stroke={dark ? '#DDFF80' : '#88BB41'}
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeDasharray={`${(CIRC * 70) / 360} ${CIRC}`}
-          opacity="0.9"
-          transform="rotate(-160 50 50)"
-        />
+        <circle cx="50" cy="50" r={R + 7} fill="none" stroke={dark ? 'rgba(255,255,255,0.1)' : 'rgba(94,133,43,0.1)'} strokeWidth="0.3" />
+        <circle cx="50" cy="50" r={R} fill="none" stroke={dark ? 'rgba(221,255,128,0.3)' : 'rgba(136,187,65,0.38)'} strokeWidth="0.6" />
         {/* direction marks between the services */}
         {wheelStops.map((_, i) => {
-          const deg = i * (360 / N) + 360 / N / 2 - 90;
+          const deg = i * STEP + STEP / 2 - 90;
           const rad = (deg * Math.PI) / 180;
           return (
             <path
               key={i}
-              d="M -0.9 -1.3 L 0.6 0 L -0.9 1.3"
+              d="M -0.7 -1 L 0.5 0 L -0.7 1"
               fill="none"
-              stroke={dark ? 'rgba(221,255,128,0.7)' : '#5E852B'}
-              strokeWidth="0.55"
+              stroke={dark ? 'rgba(221,255,128,0.6)' : 'rgba(94,133,43,0.6)'}
+              strokeWidth="0.45"
               strokeLinecap="round"
               strokeLinejoin="round"
-              transform={`translate(${f(50 + R * Math.cos(rad))} ${f(50 + R * Math.sin(rad))}) rotate(${deg + 90})`}
+              transform={`translate(${f(50 + R * Math.cos(rad))} ${f(50 + R * Math.sin(rad))}) rotate(${f(deg + 90)})`}
             />
           );
         })}
-        <circle ref={dot} cx="50" cy={50 - R} r="1.9" fill="#DDFF80" stroke="#038F2F" strokeWidth="0.6" style={{ filter: 'drop-shadow(0 0 1.5px rgba(221,255,128,0.95))' }} />
       </svg>
 
+      {/* the sweep: a lit arc that fades to nothing behind its head, turning with the season */}
+      <div ref={sweep} aria-hidden className="absolute inset-0">
+        <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+          <defs>
+            <linearGradient id={`sweep-${v}`} gradientUnits="userSpaceOnUse" x1={50 - R} y1="50" x2="50" y2={50 - R}>
+              <stop offset="0" stopColor={head} stopOpacity="0" />
+              <stop offset="0.65" stopColor={head} stopOpacity="0.45" />
+              <stop offset="1" stopColor={head} stopOpacity="1" />
+            </linearGradient>
+            <linearGradient id={`sweep-glow-${v}`} gradientUnits="userSpaceOnUse" x1={50 - R} y1="50" x2="50" y2={50 - R}>
+              <stop offset="0" stopColor={glow} stopOpacity="0" />
+              <stop offset="1" stopColor={glow} stopOpacity="0.9" />
+            </linearGradient>
+            <filter id={`sweep-blur-${v}`} x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.1" />
+            </filter>
+          </defs>
+          <path d={`M ${50 - R} 50 A ${R} ${R} 0 0 1 50 ${50 - R}`} fill="none" stroke={`url(#sweep-glow-${v})`} strokeWidth="3.2" strokeLinecap="round" filter={`url(#sweep-blur-${v})`} />
+          <path d={`M ${50 - R} 50 A ${R} ${R} 0 0 1 50 ${50 - R}`} fill="none" stroke={`url(#sweep-${v})`} strokeWidth="1.1" strokeLinecap="round" />
+        </svg>
+      </div>
+
       {wheelStops.map((s, i) => {
-        const deg = i * (360 / N) - 90;
+        const deg = i * STEP - 90;
         const rad = (deg * Math.PI) / 180;
         const on = i === active;
         return (
@@ -109,16 +125,16 @@ export function ServiceWheel({ onPick, compact = false, dark = false, children }
             type="button"
             onClick={() => onPick?.(s.scene)}
             style={{ left: `${f(50 + R * Math.cos(rad))}%`, top: `${f(50 + R * Math.sin(rad))}%`, ['--k' as string]: i }}
-            className={`wheel-stop absolute z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-2xl text-center ring-1 transition-[background-color,box-shadow,transform] duration-300 ${
-              compact ? 'w-[24%] px-1 py-1.5' : 'w-[27%] px-2 py-2'
+            className={`wheel-stop absolute z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-2xl text-center ring-1 transition-[background-color,box-shadow,transform] duration-700 ease-out ${
+              compact ? 'w-[25%] px-1 py-1.5' : 'w-[27.5%] px-2 py-2.5'
             } ${
               on
-                ? 'scale-[1.06] bg-lime shadow-[0_10px_30px_-10px_rgba(3,143,47,0.55)] ring-field'
-                : 'bg-white shadow-[0_8px_24px_-16px_rgba(2,43,54,0.5)] ring-ink/[0.07] hover:ring-field'
+                ? 'scale-[1.05] bg-[#F7FFE6] ring-leaf shadow-[0_0_0_3px_rgba(221,255,128,0.75),0_0_26px_6px_rgba(190,240,90,0.55),0_0_60px_10px_rgba(136,187,65,0.28)]'
+                : 'bg-white ring-ink/[0.06] shadow-[0_10px_26px_-18px_rgba(2,43,54,0.55)] hover:ring-leaf'
             }`}
           >
-            <span className={`font-bold leading-[1.15] text-ink ${compact ? 'text-[0.66rem]' : 'text-[clamp(0.74rem,0.95vw,0.9rem)]'}`}>{s.label}</span>
-            {!compact && <span className="mt-0.5 text-[clamp(0.62rem,0.75vw,0.72rem)] font-semibold leading-tight text-ink-mute">{s.via}</span>}
+            <span className={`font-bold leading-[1.15] transition-colors duration-700 ${on ? 'text-field' : 'text-ink'} ${compact ? 'text-[0.66rem]' : 'text-[clamp(0.76rem,0.98vw,0.95rem)]'}`}>{s.label}</span>
+            {!compact && <span className="mt-0.5 text-[clamp(0.64rem,0.78vw,0.75rem)] font-semibold leading-tight text-ink-mute">{s.via}</span>}
           </button>
         );
       })}
