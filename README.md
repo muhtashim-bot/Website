@@ -11,6 +11,7 @@ Each version lives on its own branch and has its own Vercel site:
 | `main` | ifarmer-asia | Same as `video` |
 | `video` | ifarmer-video.vercel.app | Homepage opens on the round service wheel, then a scroll story over real footage |
 | `flow` | ifarmer-flow.vercel.app | Same as `video`, but the wheel is replaced by an isometric loop of service stations with value flowing through glass pipes (`src/components/ServiceFlow.tsx`) |
+| `loop` | ifarmer-loop.vercel.app | The glass-pipe loop of service stations, standing on flat farmland, with the whole scene turning slowly through 360° (`src/components/ServiceFlow.tsx`) |
 | `animation` | ifarmer-animation.vercel.app | Earlier 3D-rendered homepage |
 
 ## Run it locally

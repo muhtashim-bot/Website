@@ -357,7 +357,7 @@ function StepsArc({ beatIdx, onPick }: { beatIdx: number; onPick: (scene: string
                   tabIndex={opacity ? 0 : -1}
                   aria-hidden={opacity ? undefined : true}
                   className="group flex -translate-y-1/2 items-center gap-3 whitespace-nowrap transition-opacity duration-500"
-                  style={{ opacity, pointerEvents: opacity ? 'auto' : 'none' }}
+                  style={{ opacity, pointerEvents: opacity ? undefined : 'none' }}
                 >
                   <span className={`-ml-[7px] h-[14px] w-[14px] rounded-full border-[3px] ${d < 0 ? 'border-leaf bg-leaf' : 'border-ink/20 bg-[#FFFDF5]'}`} aria-hidden />
                   <span className={`text-[0.98rem] font-bold group-hover:text-field ${d < 0 ? 'text-ink' : 'text-ink-soft'}`}>{s.service}</span>

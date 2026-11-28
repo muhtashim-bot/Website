@@ -1,16 +1,18 @@
 'use client';
 
 /*
- * "Flow" version of the homepage opener: an isometric model of iFarmer's whole season. Eight
- * service stations sit on a loop of glass pipes around the farmer; value (seed, cash, produce)
- * flows through the pipes all the way round, and from every side into the hub, where a ring of
- * services revolves. Hover or tap a station for its name and what it does. Clicking one jumps to
- * that part of the story below.
+ * "Loop" version of the homepage opener: an isometric model of iFarmer's whole season, standing on
+ * open, flat farmland. Eight service stations sit on a loop of glass pipes around the farmer; value
+ * (seed, cash, produce) flows through the pipes all the way round, and from every side into the
+ * hub, where a ring of services revolves. The whole place turns slowly through a full 360°. Hover or
+ * tap a station for its name and what it does; clicking one jumps to that part of the story below.
  *
- * Everything is one SVG drawn from simple isometric shapes, animated with SMIL so the whole scene
- * can be paused at once: when it is off screen, and from the start for reduced motion.
+ * Built for smoothness: the land and the pipes are drawn once, flat, and turned and tilted into
+ * isometric view by a CSS transform; each station and the hub is its own small layer that only
+ * moves, and the value in the pipes is placed by the same single loop that turns the land.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { metrics } from '@/content/metrics';
 
 /* ---------- isometric geometry ---------- */
@@ -33,7 +35,7 @@ const H = 34; // half-size of a station platform
 const PH = 10; // platform height
 const ZP = 6; // pipe height
 const HUB = 60; // hub radius
-const VB = { x: -330, y: -218, w: 660, h: 412 };
+const VB = { x: -345, y: -244, w: 690, h: 440 }; // the scene, in screen units (origin = the hub, on the ground)
 
 type O = { x: number; y: number; z: number };
 const at = (o: O, x: number, y: number, z: number) => iso(o.x + x, o.y + y, o.z + z);
@@ -405,21 +407,76 @@ function Hub() {
   );
 }
 
-/* ---------- pipes ---------- */
+/* ---------- the land and the pipes: drawn once, flat, in plane units ---------- */
 
-const loopPts: P2[] = [iso(-D, -D, ZP), iso(D, -D, ZP), iso(D, D, ZP), iso(-D, D, ZP)];
-const LOOP = `M ${loopPts.map((p) => p.join(' ')).join(' L ')} Z`;
-const LOOP_GROUND = `M ${[iso(-D, -D), iso(D, -D), iso(D, D), iso(-D, D)].map((p) => p.join(' ')).join(' L ')} Z`;
-const spokes = [
+const G = 440; // radius of the drawn land
+const PLAT = 42; // station platform radius
+const f1 = (n: number) => Math.round(n * 10) / 10;
+function rng(seed: number) {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// a patchwork of fields, some with crop rows
+const PLOTS = (() => {
+  const rand = rng(20261128);
+  const cell = 88;
+  const n = Math.ceil(G / cell) + 1;
+  const pts: number[][][] = [];
+  for (let i = -n; i <= n; i++) {
+    pts[i + n] = [];
+    for (let j = -n; j <= n; j++) pts[i + n][j + n] = [i * cell + (rand() - 0.5) * cell * 0.5, j * cell + (rand() - 0.5) * cell * 0.5];
+  }
+  const fills = ['#D5EBAE', '#C9E49C', '#DCEFBB', '#BFDD8E', '#D1E8A8', '#C4E096', '#F2E38E', '#E9E0C4', '#DCEFBB', '#CBE6A0'];
+  const plots: { d: string; fill: string; rows: number }[] = [];
+  for (let i = 0; i < 2 * n; i++) {
+    for (let j = 0; j < 2 * n; j++) {
+      const q = [pts[i][j], pts[i + 1][j], pts[i + 1][j + 1], pts[i][j + 1]];
+      const cx = (q[0][0] + q[2][0]) / 2;
+      const cy = (q[0][1] + q[2][1]) / 2;
+      if (Math.hypot(cx, cy) > G - 30) continue;
+      plots.push({ d: `M ${q.map((p) => `${f1(p[0])} ${f1(p[1])}`).join(' L ')} Z`, fill: fills[Math.floor(rand() * fills.length)], rows: rand() < 0.55 ? Math.floor(rand() * 3) : -1 });
+    }
+  }
+  return plots;
+})();
+const PONDS = [
+  { cx: 92, cy: -92, rx: 17, ry: 11, a: 30 },
+  { cx: -262, cy: 118, rx: 36, ry: 22, a: -20 },
+  { cx: 246, cy: 250, rx: 40, ry: 24, a: 15 },
+  { cx: -236, cy: -296, rx: 34, ry: 21, a: 50 },
+];
+
+const CORNERS: [number, number][] = [
+  [-D, -D],
+  [D, -D],
+  [D, D],
+  [-D, D],
+];
+const LOOP_P = `M ${CORNERS.map((p) => p.join(' ')).join(' L ')} Z`;
+const SPOKE_ENDS: [number, number][] = [
   [0, -D],
   [D, 0],
   [0, D],
   [-D, 0],
-].map(([x, y]) => ({ d: `M ${iso(x, y, ZP).join(' ')} L ${iso(0, 0, ZP).join(' ')}`, g: `M ${iso(x, y).join(' ')} L ${iso(0, 0).join(' ')}` }));
-// collars along the pipes, where the glass is joined
-const collars: string[] = [];
-{
-  const corners: [number, number][] = [
+];
+const SPOKES_P = SPOKE_ENDS.map(([x, y]) => `M ${x} ${y} L 0 0`);
+// collars where the glass is joined: halfway between stations, and partway along each spoke
+const COLLARS_P = [
+  ...stationsAround().map(([a, b]) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, b[0] - a[0], b[1] - a[1]]),
+  ...SPOKE_ENDS.map(([x, y]) => [x * 0.6, y * 0.6, -x, -y]),
+].map(([x, y, dx, dy]) => {
+  const l = Math.hypot(dx, dy);
+  const ux = (dx / l) * 4.5;
+  const uy = (dy / l) * 4.5;
+  return `M ${f1(x - ux)} ${f1(y - uy)} L ${f1(x + ux)} ${f1(y + uy)}`;
+});
+function stationsAround(): [[number, number], [number, number]][] {
+  const ring: [number, number][] = [
     [-D, -D],
     [0, -D],
     [D, -D],
@@ -429,52 +486,261 @@ const collars: string[] = [];
     [-D, D],
     [-D, 0],
   ];
-  const seg = (a: [number, number], b: [number, number], t: number) => {
-    const l = 4 / D;
-    const p = (s: number) => iso(a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, ZP).join(' ');
-    collars.push(`M ${p(t - l)} L ${p(t + l)}`);
-  };
-  corners.forEach((c, i) => {
-    const n = corners[(i + 1) % corners.length];
-    seg(c, n, 0.5);
-  });
-  [
-    [0, -D],
-    [D, 0],
-    [0, D],
-    [-D, 0],
-  ].forEach(([x, y]) => seg([x, y], [0, 0], 0.4));
+  return ring.map((p, i) => [p, ring[(i + 1) % ring.length]]);
 }
 
+function Ground({ dark }: { dark: boolean }) {
+  const pipe = (stroke: string, width: number, extra?: object) => (
+    <>
+      <path d={LOOP_P} stroke={stroke} strokeWidth={width} {...extra} />
+      {SPOKES_P.map((d, i) => (
+        <path key={i} d={d} stroke={stroke} strokeWidth={width} {...extra} />
+      ))}
+    </>
+  );
+  return (
+    <svg viewBox={`${-G} ${-G} ${G * 2} ${G * 2}`} className="absolute inset-0 h-full w-full" aria-hidden>
+      <circle r={G} fill={dark ? '#D9EBC2' : '#E3F0CF'} />
+      <g stroke="#EEF5E2" strokeWidth="3" strokeLinejoin="round">
+        {PLOTS.map((p, i) => (
+          <path key={i} d={p.d} fill={p.fill} />
+        ))}
+      </g>
+      <g opacity="0.32">{PLOTS.map((p, i) => (p.rows >= 0 ? <path key={i} d={p.d} fill={`url(#fl-rows-${p.rows})`} /> : null))}</g>
+      {PONDS.map((p, i) => (
+        <g key={i} transform={`translate(${p.cx} ${p.cy}) rotate(${p.a})`}>
+          <ellipse rx={p.rx + 5} ry={p.ry + 5} fill="#D9E9C8" />
+          <ellipse rx={p.rx} ry={p.ry} fill="#A9D8E6" />
+          <ellipse rx={p.rx * 0.55} ry={p.ry * 0.35} cx={-p.rx * 0.2} cy={-p.ry * 0.25} fill="#C8E9F2" />
+        </g>
+      ))}
+      {/* the glass pipes */}
+      <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+        {pipe('rgba(2,43,54,0.1)', 27)}
+        {pipe('#A9BEA3', 18)}
+        {pipe('#F1F6EE', 14.5)}
+        {pipe('#FFFFFF', 2.4, { opacity: 0.9 })}
+        {COLLARS_P.map((d, i) => (
+          <g key={i}>
+            <path d={d} stroke="#A9BEA3" strokeWidth="21.5" strokeLinecap="butt" />
+            <path d={d} stroke="#F7FAF5" strokeWidth="18.5" strokeLinecap="butt" />
+          </g>
+        ))}
+      </g>
+    </svg>
+  );
+}
+
+/* ---------- shared gradients, mounted once outside any hidden copy of the scene ---------- */
+
+let defsOwner = false;
+function FlowDefs() {
+  const [own, setOwn] = useState(false);
+  useEffect(() => {
+    if (defsOwner) return;
+    defsOwner = true;
+    setOwn(true);
+    return () => {
+      defsOwner = false;
+    };
+  }, []);
+  if (!own) return null;
+  return createPortal(
+    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden>
+      <defs>
+        <linearGradient id="fl-plat" x1="0" x2="1">
+          <stop offset="0" stopColor="#F4F8F1" />
+          <stop offset="1" stopColor="#CFDBCB" />
+        </linearGradient>
+        <linearGradient id="fl-sack" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stopColor="#EADBB9" />
+          <stop offset="1" stopColor="#C8B48A" />
+        </linearGradient>
+        <linearGradient id="fl-soil" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stopColor="#8E6B47" />
+          <stop offset="1" stopColor="#6A4F34" />
+        </linearGradient>
+        <linearGradient id="fl-coin" x1="0" x2="1">
+          <stop offset="0" stopColor="#F3C94F" />
+          <stop offset="1" stopColor="#C99428" />
+        </linearGradient>
+        <linearGradient id="fl-pole" x1="0" x2="1">
+          <stop offset="0" stopColor="#F1F5EE" />
+          <stop offset="1" stopColor="#B9C6B6" />
+        </linearGradient>
+        <linearGradient id="fl-glass" x1="0" x2="1">
+          <stop offset="0" stopColor="rgba(255,255,255,0.7)" />
+          <stop offset="0.5" stopColor="rgba(235,245,230,0.35)" />
+          <stop offset="1" stopColor="rgba(200,220,195,0.5)" />
+        </linearGradient>
+        <radialGradient id="fl-shade">
+          <stop offset="0.35" stopColor="rgba(2,43,54,0.2)" />
+          <stop offset="1" stopColor="rgba(2,43,54,0)" />
+        </radialGradient>
+        <radialGradient id="fl-glow">
+          <stop offset="0" stopColor="rgba(221,255,128,0.9)" />
+          <stop offset="1" stopColor="rgba(221,255,128,0)" />
+        </radialGradient>
+        {[0, 60, 120].map((a, k) => (
+          <pattern key={k} id={`fl-rows-${k}`} width="11" height="11" patternUnits="userSpaceOnUse" patternTransform={`rotate(${a})`}>
+            <rect width="11" height="5" fill="#7FAF45" />
+          </pattern>
+        ))}
+      </defs>
+    </svg>,
+    document.body,
+  );
+}
+
+/* ---------- placing things as the land turns ---------- */
+
+type Box = { w: number; top: number; h: number };
+const SP: Box = { w: 176, top: 116, h: 168 }; // a station's layer, around its ground point
+const HP: Box = { w: 190, top: 116, h: 176 }; // the hub's layer
+const TURN = (2 * Math.PI) / 110; // radians per second: one full turn in a little under two minutes
+const START = -0.3; // the turn the scene opens at
+
+/** screen position of a plane point after the land has turned by a */
+function project(x: number, y: number, a: number) {
+  const ca = Math.cos(a);
+  const sa = Math.sin(a);
+  const xr = x * ca - y * sa;
+  const yr = x * sa + y * ca;
+  return { sx: (xr - yr) * C, sy: (xr + yr) * 0.5, depth: xr + yr };
+}
+/** the transform that puts a layer's ground point at screen position (sx, sy), in % of its own size */
+const seat = (sx: number, sy: number, b: Box) => `translate3d(${(((sx - VB.x - b.w / 2) / b.w) * 100).toFixed(3)}%, ${(((sy - VB.y - b.top) / b.h) * 100).toFixed(3)}%, 0)`;
+const size = (b: Box) => ({ width: `${(b.w / VB.w) * 100}%`, height: `${(b.h / VB.h) * 100}%` });
+const groundTurn = (a: number) => `scale(${(Math.SQRT2 * C).toFixed(5)}, ${Math.SQRT1_2.toFixed(5)}) rotate(${(45 + (a * 180) / Math.PI).toFixed(3)}deg)`;
+const z = (depth: number) => 1000 + Math.round(depth / 4);
+
+/* the value in the pipes: where each piece is at time t (seconds) */
 const BALLS = ['#B8E655', '#6FAE2E', '#F2C14E', '#B8E655', '#6FAE2E', '#B8E655', '#F2C14E', '#6FAE2E', '#B8E655', '#6FAE2E', '#F2C14E', '#B8E655', '#6FAE2E', '#F2C14E'];
 const LOOP_DUR = 18;
+const SPOKE_DUR = 3.2;
+const SPOKE_BALLS = SPOKE_ENDS.flatMap((_, j) => [0, 1].map((k) => ({ j, k })));
+function onLoop(u: number): [number, number] {
+  const s = (((u % 1) + 1) % 1) * 4;
+  const k = Math.floor(s);
+  const f = s - k;
+  const a = CORNERS[k];
+  const b = CORNERS[(k + 1) % 4];
+  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+}
+function onSpoke(j: number, u: number): [number, number] {
+  const f = ((u % 1) + 1) % 1;
+  const [x, y] = SPOKE_ENDS[j];
+  return [x * (1 - f), y * (1 - f)];
+}
 
-/* ---------- component ---------- */
+const hubInfo = { id: 'hub', label: 'The farmer', via: 'At the centre', detail: 'Every service, from financing to payout, flows to and from the farmer.', scene: '', x: 0, y: 0, tall: 64 };
 
 export function ServiceFlow({ onPick, dark = false, compact = false }: { onPick?: (scene: string) => void; dark?: boolean; compact?: boolean }) {
   const root = useRef<HTMLDivElement>(null);
-  const svg = useRef<SVGSVGElement>(null);
+  const ground = useRef<HTMLDivElement>(null);
+  const layers = useRef<(HTMLDivElement | null)[]>([]);
+  const balls = useRef<(SVGCircleElement | null)[]>([]);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const svgs = useRef<Set<SVGSVGElement>>(new Set());
+  const angle = useRef(START);
+  const clock = useRef(0); // seconds of flow, paused with the scene
   const [hover, setHover] = useState<string | null>(null);
   const [tour, setTour] = useState(0);
   const [seen, setSeen] = useState(true);
   const still = useRef(false);
   const pointer = useRef('mouse'); // what the last press came from, so touch can tap once to read
 
-  // pause the whole scene off screen and for reduced motion
+  const keep = useCallback((el: SVGSVGElement | null) => {
+    if (el) svgs.current.add(el);
+  }, []);
+
+  const shown = hover === 'hub' ? hubInfo : stations.find((s) => s.id === (hover ?? stations[tour].id))!;
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+
+  // where the card sits for the station it describes, at turn a
+  const cardSpot = (a: number) => {
+    const s = shownRef.current;
+    const p = project(s.x, s.y, a);
+    const topY = p.sy - PH - s.tall;
+    const left = ((p.sx - VB.x) / VB.w) * 100;
+    const flip = (topY - VB.y) / VB.h < 0.22; // near the top edge, show the card under the station
+    const top = (((flip ? p.sy + PLAT * 0.75 : topY) - VB.y) / VB.h) * 100;
+    return { left, top, flip };
+  };
+
+  const place = useCallback((a: number, t: number) => {
+    if (ground.current) ground.current.style.transform = groundTurn(a % (2 * Math.PI));
+    stations.forEach((s, i) => {
+      const el = layers.current[i];
+      if (!el) return;
+      const p = project(s.x, s.y, a);
+      el.style.transform = seat(p.sx, p.sy, SP);
+      el.style.zIndex = String(z(p.depth));
+    });
+    BALLS.forEach((_, i) => {
+      const el = balls.current[i];
+      if (!el) return;
+      const [x, y] = onLoop(t / LOOP_DUR + i / BALLS.length);
+      const p = project(x, y, a);
+      el.setAttribute('transform', `translate(${p.sx.toFixed(1)} ${p.sy.toFixed(1)})`);
+    });
+    SPOKE_BALLS.forEach(({ j, k }, i) => {
+      const el = balls.current[BALLS.length + i];
+      if (!el) return;
+      const [x, y] = onSpoke(j, t / SPOKE_DUR + j * 0.25 + k * 0.5);
+      const p = project(x, y, a);
+      el.setAttribute('transform', `translate(${p.sx.toFixed(1)} ${p.sy.toFixed(1)})`);
+    });
+    const c = cardRef.current;
+    if (c) {
+      const spot = cardSpot(a);
+      c.style.left = `${spot.left}%`;
+      c.style.top = `${spot.top}%`;
+      c.style.transform = `translate(${-spot.left}%, ${spot.flip ? '10px' : 'calc(-100% - 10px)'})`;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     still.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const el = root.current;
     if (!el) return;
-    const io = new IntersectionObserver(([e]) => setSeen(e.intersectionRatio > 0.15), { threshold: [0, 0.15, 0.4] });
+    const io = new IntersectionObserver(([e]) => setSeen(e.intersectionRatio > 0.1), { threshold: [0, 0.1, 0.3] });
     io.observe(el);
     return () => io.disconnect();
   }, []);
+
+  // the little animations inside the stations and hub pause with the scene
   useEffect(() => {
-    const s = svg.current;
-    if (!s) return;
-    if (seen && !still.current) s.unpauseAnimations();
-    else s.pauseAnimations();
+    const run = seen && !still.current;
+    svgs.current.forEach((s) => (run ? s.unpauseAnimations() : s.pauseAnimations()));
   }, [seen]);
+
+  // one loop turns the land and moves the value through the pipes; the turn eases to a stop while
+  // someone points at a station, and everything stops when the scene is out of sight
+  const held = hover !== null;
+  useEffect(() => {
+    if (!seen || still.current) {
+      place(angle.current, clock.current);
+      return;
+    }
+    const target = held ? 0 : TURN;
+    let speed = held ? 0 : TURN * 0.6;
+    let last = performance.now();
+    let raf = 0;
+    const frame = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      speed += (target - speed) * Math.min(1, dt * 2.5);
+      angle.current += speed * dt;
+      clock.current += dt;
+      place(angle.current, clock.current);
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [seen, held, place]);
 
   // when nobody is pointing, the highlight travels round the loop
   useEffect(() => {
@@ -484,9 +750,6 @@ export function ServiceFlow({ onPick, dark = false, compact = false }: { onPick?
   }, [hover, seen]);
 
   const activeId = hover ?? stations[tour].id;
-  const hubInfo = { id: 'hub', label: 'The farmer', via: 'At the centre', detail: 'Every service, from financing to payout, flows to and from the farmer.', x: 0, y: 0, tall: 64 };
-  const shown = hover === 'hub' ? hubInfo : stations.find((s) => s.id === activeId);
-
   const enter = (id: string) => (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse') setHover(id);
   };
@@ -499,40 +762,23 @@ export function ServiceFlow({ onPick, dark = false, compact = false }: { onPick?
     if (scene) onPick?.(scene);
   };
 
-  const card = (() => {
-    if (!shown) return null;
-    const top = iso(shown.x, shown.y, PH + shown.tall);
-    const below = iso(shown.x + H, shown.y + H, 0);
-    const pct = (p: P2) => ({ left: ((p[0] - VB.x) / VB.w) * 100, top: ((p[1] - VB.y) / VB.h) * 100 });
-    const flip = pct(top).top < 26; // near the top edge, show the card under the station instead
-    const a = flip ? pct([top[0], below[1]]) : pct(top);
-    const full = !!hover;
-    return (
-      <div
-        key={`${shown.id}-${full}`}
-        className="flow-card pointer-events-none absolute z-30"
-        style={{ left: `${a.left}%`, top: `${a.top}%`, transform: `translate(${-a.left}%, ${flip ? '10px' : 'calc(-100% - 10px)'})` }}
-      >
-        {full ? (
-          <div className={`rounded-2xl bg-white p-3.5 text-left shadow-[0_18px_40px_-16px_rgba(2,43,54,0.45)] ring-1 ring-ink/[0.06] ${compact ? 'w-[min(230px,64vw)]' : 'w-[240px]'}`}>
-            <p className="text-[0.95rem] font-bold leading-tight text-field">{shown.label}</p>
-            <p className="mt-0.5 text-[0.72rem] font-semibold text-ink-mute">{shown.via}</p>
-            <p className="mt-2 text-[0.8rem] leading-snug text-ink-soft">{shown.detail}</p>
-            {shown.id !== 'hub' && onPick && <p className="mt-2 text-[0.72rem] font-bold text-field">{compact ? 'Tap again' : 'Click'} to see it in the season</p>}
-          </div>
-        ) : (
-          <div className="whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-[0.78rem] font-bold text-field shadow-[0_10px_24px_-12px_rgba(2,43,54,0.5)] ring-1 ring-leaf/40">{shown.label}</div>
-        )}
-      </div>
-    );
-  })();
-
-  const order = ['finance', 'inputs', 'next', 'advice', 'paid', 'hub', 'insurance', 'center', 'market'];
+  // before the first frame, so the server-drawn page already looks right
+  const initialLayer = (x: number, y: number) => {
+    const p = project(x, y, START);
+    return { transform: seat(p.sx, p.sy, SP), zIndex: z(p.depth) };
+  };
+  const initialBall = (i: number) => {
+    const [x, y] = i < BALLS.length ? onLoop(i / BALLS.length) : onSpoke(SPOKE_BALLS[i - BALLS.length].j, SPOKE_BALLS[i - BALLS.length].j * 0.25 + SPOKE_BALLS[i - BALLS.length].k * 0.5);
+    const p = project(x, y, START);
+    return `translate(${p.sx.toFixed(1)} ${p.sy.toFixed(1)})`;
+  };
+  const spot0 = cardSpot(angle.current);
+  const full = !!hover;
 
   return (
     <div
       ref={root}
-      className="relative w-full"
+      className="relative w-full select-none"
       style={{ aspectRatio: `${VB.w} / ${VB.h}` }}
       onPointerDown={(e) => {
         pointer.current = e.pointerType;
@@ -542,185 +788,124 @@ export function ServiceFlow({ onPick, dark = false, compact = false }: { onPick?
         if (e.pointerType === 'mouse') setHover(null);
       }}
     >
-      <svg ref={svg} viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`} className="absolute inset-0 h-full w-full overflow-visible" role="group" aria-label="iFarmer's services, connected around the farmer">
-        <defs>
-          <linearGradient id="fl-plat" x1="0" x2="1">
-            <stop offset="0" stopColor="#F4F8F1" />
-            <stop offset="1" stopColor="#CFDBCB" />
-          </linearGradient>
-          <linearGradient id="fl-side" x1="0" y1="1" x2="1" y2="0">
-            <stop offset="0" stopColor="#F1F5EE" />
-            <stop offset="1" stopColor="#CCD8C8" />
-          </linearGradient>
-          <linearGradient id="fl-sack" x1="0" y1="1" x2="1" y2="0">
-            <stop offset="0" stopColor="#EADBB9" />
-            <stop offset="1" stopColor="#C8B48A" />
-          </linearGradient>
-          <linearGradient id="fl-soil" x1="0" y1="1" x2="1" y2="0">
-            <stop offset="0" stopColor="#8E6B47" />
-            <stop offset="1" stopColor="#6A4F34" />
-          </linearGradient>
-          <linearGradient id="fl-coin" x1="0" x2="1">
-            <stop offset="0" stopColor="#F3C94F" />
-            <stop offset="1" stopColor="#C99428" />
-          </linearGradient>
-          <linearGradient id="fl-pole" x1="0" x2="1">
-            <stop offset="0" stopColor="#F1F5EE" />
-            <stop offset="1" stopColor="#B9C6B6" />
-          </linearGradient>
-          <linearGradient id="fl-glass" x1="0" x2="1">
-            <stop offset="0" stopColor="rgba(255,255,255,0.7)" />
-            <stop offset="0.5" stopColor="rgba(235,245,230,0.35)" />
-            <stop offset="1" stopColor="rgba(200,220,195,0.5)" />
-          </linearGradient>
-          <radialGradient id="fl-shadow">
-            <stop offset="0.3" stopColor="rgba(2,43,54,0.16)" />
-            <stop offset="1" stopColor="rgba(2,43,54,0)" />
-          </radialGradient>
-          <radialGradient id="fl-glow">
-            <stop offset="0" stopColor="rgba(221,255,128,0.9)" />
-            <stop offset="1" stopColor="rgba(221,255,128,0)" />
-          </radialGradient>
-          <radialGradient id="fl-ground">
-            <stop offset="0" stopColor={dark ? 'rgba(221,255,128,0.12)' : 'rgba(221,255,128,0.4)'} />
-            <stop offset="1" stopColor="rgba(221,255,128,0)" />
-          </radialGradient>
-          <path id="fl-loop" d={LOOP} />
-          {spokes.map((s, i) => (
-            <path key={i} id={`fl-spoke-${i}`} d={s.d} />
-          ))}
-        </defs>
+      <FlowDefs />
+      {/* the land, flat, fading out on every side; the pipes are part of it and turn with it */}
+      <div className="absolute inset-0 [mask-image:radial-gradient(ellipse_50%_47%_at_50%_54%,#000_55%,transparent_100%)]">
+        <div
+          ref={ground}
+          className="absolute will-change-transform"
+          style={{
+            left: `${((-G - VB.x) / VB.w) * 100}%`,
+            top: `${((-G - VB.y) / VB.h) * 100}%`,
+            width: `${((G * 2) / VB.w) * 100}%`,
+            height: `${((G * 2) / VB.h) * 100}%`,
+            transform: groundTurn(START),
+          }}
+        >
+          <Ground dark={dark} />
+        </div>
+      </div>
 
-        <ellipse cx="0" cy="0" rx="320" ry="190" fill="url(#fl-ground)" />
-
-        {/* shadows on the ground */}
-        <g fill="none" stroke={dark ? 'rgba(0,0,0,0.25)' : 'rgba(2,43,54,0.07)'} strokeWidth="13" strokeLinejoin="round">
-          <path d={LOOP_GROUND} transform="translate(3 3)" />
-          {spokes.map((s, i) => (
-            <path key={i} d={s.g} transform="translate(3 3)" />
-          ))}
-        </g>
-        {stations.map((s) => (
-          <Shadow key={s.id} cx={s.x} cy={s.y} s={H + 8} />
+      {/* the value flowing through the pipes */}
+      <svg viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`} className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" style={{ zIndex: 100 }} aria-hidden>
+        {[...BALLS, ...SPOKE_BALLS.map(({ k }) => (k ? '#F2C14E' : '#B8E655'))].map((c, i) => (
+          <circle
+            key={i}
+            ref={(el) => {
+              balls.current[i] = el;
+            }}
+            r={i < BALLS.length ? 5.4 : 4.8}
+            fill={c}
+            stroke="rgba(2,43,54,0.28)"
+            strokeWidth="0.9"
+            transform={initialBall(i)}
+          />
         ))}
-        <circle r={HUB + 14} transform={`${flat(0)} translate(5 5)`} fill="url(#fl-shadow)" />
+      </svg>
 
-        {/* the glass pipes, with value flowing through them */}
-        <g fill="none" strokeLinejoin="round" strokeLinecap="round">
-          <path d={LOOP} stroke="#C9D7C4" strokeWidth="15" />
-          {spokes.map((s, i) => (
-            <path key={i} d={s.d} stroke="#C9D7C4" strokeWidth="15" />
-          ))}
-          <path d={LOOP} stroke="#EEF4EA" strokeWidth="12.5" />
-          {spokes.map((s, i) => (
-            <path key={i} d={s.d} stroke="#EEF4EA" strokeWidth="12.5" />
-          ))}
-        </g>
-        <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-          <path d={LOOP} stroke="rgba(255,255,255,0.18)" strokeWidth="12.5" />
-          {spokes.map((s, i) => (
-            <path key={i} d={s.d} stroke="rgba(255,255,255,0.18)" strokeWidth="12.5" />
-          ))}
-        </g>
-        <g>
-          {BALLS.map((c, i) => (
-            <circle key={i} r="5.4" fill={c} stroke="rgba(2,43,54,0.28)" strokeWidth="0.9">
-              <animateMotion dur={`${LOOP_DUR}s`} begin={`${-(i * LOOP_DUR) / BALLS.length}s`} repeatCount="indefinite">
-                <mpath href="#fl-loop" />
-              </animateMotion>
-            </circle>
-          ))}
-          {spokes.map((_, i) =>
-            [0, 1].map((k) => (
-              <circle key={`${i}-${k}`} r="4.8" fill={k ? '#F2C14E' : '#B8E655'} stroke="rgba(2,43,54,0.28)" strokeWidth="0.9">
-                <animateMotion dur="3.2s" begin={`${-(i * 0.8 + k * 1.6)}s`} repeatCount="indefinite">
-                  <mpath href={`#fl-spoke-${i}`} />
-                </animateMotion>
-              </circle>
-            )),
-          )}
-        </g>
-        <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-          <path d={LOOP} stroke="#FFFFFF" strokeWidth="1.8" transform="translate(0 -4.4)" opacity="0.9" />
-          {spokes.map((s, i) => (
-            <path key={i} d={s.d} stroke="#FFFFFF" strokeWidth="1.8" transform="translate(0 -4.4)" opacity="0.9" />
-          ))}
-          {collars.map((d, i) => (
-            <g key={i}>
-              <path d={d} stroke="#C9D7C4" strokeWidth="18" strokeLinecap="butt" />
-              <path d={d} stroke="#F7FAF5" strokeWidth="15.5" strokeLinecap="butt" />
-            </g>
-          ))}
-        </g>
+      {/* the farmer's hub, at the centre */}
+      <div className="absolute left-0 top-0" style={{ ...size(HP), transform: seat(0, 0, HP), zIndex: 1000 }}>
+        <svg ref={keep} viewBox={`${-HP.w / 2} ${-HP.top} ${HP.w} ${HP.h}`} className="absolute inset-0 h-full w-full overflow-visible">
+          <g
+            className="flow-station cursor-default outline-none"
+            tabIndex={0}
+            role="button"
+            aria-label="The farmer: every service, from financing to payout, flows to and from the farmer"
+            onPointerEnter={enter('hub')}
+            onFocus={() => setHover('hub')}
+            onBlur={() => setHover(null)}
+            onClick={tap('hub')}
+          >
+            <ellipse cx="5" cy="7" rx={HUB * 1.5} ry={HUB * 0.9} fill="url(#fl-shade)" />
+            <ellipse cx="0" cy={-6} rx={HUB * 1.6} ry={HUB * 0.95} fill="url(#fl-glow)" style={{ opacity: hover === 'hub' ? 0.9 : 0, transition: 'opacity .4s' }} />
+            <Hub />
+          </g>
+        </svg>
+      </div>
 
-        {/* stations and hub, back to front */}
-        {order.map((id) => {
-          if (id === 'hub') {
-            const on = hover === 'hub';
-            return (
+      {/* the stations, each its own layer */}
+      {stations.map((st, i) => {
+        const o: O = { x: 0, y: 0, z: PH };
+        const on = activeId === st.id;
+        return (
+          <div
+            key={st.id}
+            ref={(el) => {
+              layers.current[i] = el;
+            }}
+            className="pointer-events-none absolute left-0 top-0 will-change-transform"
+            style={{ ...size(SP), ...initialLayer(st.x, st.y) }}
+          >
+            <svg ref={keep} viewBox={`${-SP.w / 2} ${-SP.top} ${SP.w} ${SP.h}`} className="absolute inset-0 h-full w-full overflow-visible">
               <g
-                key="hub"
-                className="flow-station cursor-default outline-none"
+                className="flow-station pointer-events-auto cursor-pointer outline-none"
                 tabIndex={0}
                 role="button"
-                aria-label="The farmer: every service, from financing to payout, flows to and from the farmer"
-                onPointerEnter={enter('hub')}
-                onFocus={() => setHover('hub')}
+                aria-label={`${st.label}: ${st.detail}`}
+                onPointerEnter={enter(st.id)}
+                onFocus={() => setHover(st.id)}
                 onBlur={() => setHover(null)}
-                onClick={tap('hub')}
+                onClick={tap(st.id, st.scene)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onPick?.(st.scene);
+                  }
+                }}
               >
-                <ellipse cx="0" cy={-6} rx={HUB * 1.6} ry={HUB * 0.95} fill="url(#fl-glow)" style={{ opacity: on ? 0.9 : 0, transition: 'opacity .4s' }} />
-                <Hub />
+                <ellipse cx="4" cy="6" rx={PLAT * 1.55} ry={PLAT * 0.95} fill="url(#fl-shade)" />
+                <ellipse cx="0" cy={-PH / 2} rx={PLAT * 2} ry={PLAT * 1.2} fill="url(#fl-glow)" style={{ opacity: on ? 0.85 : 0, transition: 'opacity .45s' }} />
+                <Cyl o={{ x: 0, y: 0, z: 0 }} x={0} y={0} z={0} r={PLAT} h={PH} top={on ? '#F6FFE3' : '#FFFFFF'} side="url(#fl-plat)" rim={on ? LEAF : '#E3EADF'} />
+                <g className="flow-obj" style={{ transform: on ? 'translateY(-5px)' : 'none' }}>
+                  {st.draw(o)}
+                </g>
+                {/* a generous, invisible target for the pointer */}
+                <rect x={-PLAT * 1.35} y={-PH - st.tall - 12} width={PLAT * 2.7} height={st.tall + PH + PLAT * 0.85 + 12} fill="transparent" />
               </g>
-            );
-          }
-          const s = stations.find((t) => t.id === id)!;
-          const o: O = { x: s.x, y: s.y, z: PH };
-          const on = activeId === s.id;
-          const [gx, gy] = iso(s.x, s.y, PH);
-          return (
-            <g
-              key={s.id}
-              className="flow-station cursor-pointer outline-none"
-              tabIndex={0}
-              role="button"
-              aria-label={`${s.label}: ${s.detail}`}
-              onPointerEnter={enter(s.id)}
-              onFocus={() => setHover(s.id)}
-              onBlur={() => setHover(null)}
-              onClick={tap(s.id, s.scene)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onPick?.(s.scene);
-                }
-              }}
-            >
-              <ellipse cx={gx} cy={gy} rx={H * 2.3} ry={H * 1.35} fill="url(#fl-glow)" style={{ opacity: on ? 0.85 : 0, transition: 'opacity .45s' }} />
-              <Slab
-                o={{ x: s.x, y: s.y, z: 0 }}
-                x={-H}
-                y={-H}
-                z={0}
-                w={H * 2}
-                d={H * 2}
-                h={PH}
-                rx={9}
-                top={on ? '#F6FFE3' : '#FFFFFF'}
-                side="url(#fl-side)"
-                stroke={on ? LEAF : '#E3EADF'}
-                style={{ transition: 'fill .4s, stroke .4s' }}
-              />
-              <g className="flow-obj" style={{ transform: on ? 'translateY(-5px)' : 'none' }}>
-                {s.draw(o)}
-              </g>
-              {/* a generous, invisible target for the pointer */}
-              <rect x={gx - H * 1.75} y={gy - s.tall - 12} width={H * 3.5} height={s.tall + H + 22} fill="transparent" />
-            </g>
-          );
-        })}
-      </svg>
-      {card}
+            </svg>
+          </div>
+        );
+      })}
+
+      {/* the card for the station in focus; it rides along as the land turns */}
+      <div
+        ref={cardRef}
+        className="pointer-events-none absolute"
+        style={{ left: `${spot0.left}%`, top: `${spot0.top}%`, transform: `translate(${-spot0.left}%, ${spot0.flip ? '10px' : 'calc(-100% - 10px)'})`, zIndex: 5000 }}
+      >
+        <div key={`${shown.id}-${full}`} className="flow-card">
+          {full ? (
+            <div className={`rounded-2xl bg-white p-3.5 text-left shadow-[0_18px_40px_-16px_rgba(2,43,54,0.45)] ring-1 ring-ink/[0.06] ${compact ? 'w-[min(230px,64vw)]' : 'w-[240px]'}`}>
+              <p className="text-[0.95rem] font-bold leading-tight text-field">{shown.label}</p>
+              <p className="mt-0.5 text-[0.72rem] font-semibold text-ink-mute">{shown.via}</p>
+              <p className="mt-2 text-[0.8rem] leading-snug text-ink-soft">{shown.detail}</p>
+              {shown.id !== 'hub' && onPick && <p className="mt-2 text-[0.72rem] font-bold text-field">{compact ? 'Tap again' : 'Click'} to see it in the season</p>}
+            </div>
+          ) : (
+            <div className="whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-[0.78rem] font-bold text-field shadow-[0_10px_24px_-12px_rgba(2,43,54,0.5)] ring-1 ring-leaf/40">{shown.label}</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
