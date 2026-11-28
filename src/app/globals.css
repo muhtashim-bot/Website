@@ -100,9 +100,19 @@
 .flow-zoom-in { animation: flowZoomIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .flow-zoom-out { animation: flowZoomOut 0.28s cubic-bezier(0.5, 0, 0.75, 0) both; }
 .flow-fade-in { animation: fadeIn 0.4s ease-out both; }
-.flow-fade-out { animation: fadeOut 0.28s ease-in both; }
+.flow-fade-out { animation: fadeOut 0.4s ease-in both; }
+/* the dive: the phone floats, the words follow it in, the page copy steps aside */
+@keyframes flowFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.flow-float { animation: flowFloat 5s ease-in-out infinite; }
+@keyframes flowInfo { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.flow-info-in { animation: flowInfo 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.25s both; }
+@keyframes flowWheel { 0% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(4px); opacity: 0; } 100% { transform: translateY(0); opacity: 0; } }
+.flow-wheel { animation: flowWheel 1.6s ease-in-out infinite; }
+[data-flow-hide] { transition: opacity 0.5s ease; }
+html.flow-diving [data-flow-hide] { opacity: 0 !important; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) {
-  .flow-zoom-in, .flow-zoom-out, .flow-fade-in, .flow-fade-out { animation-duration: 0.01ms; }
+  .flow-zoom-in, .flow-zoom-out, .flow-fade-in, .flow-fade-out, .flow-info-in { animation-duration: 0.01ms; }
+  .flow-float, .flow-wheel { animation: none; }
 }
 .flow-station:focus-visible > rect:last-child { stroke: #038F2F; stroke-width: 2; stroke-dasharray: 4 3; }
 /* the wheel's resonance: a ring born at the centre that widens and fades out */

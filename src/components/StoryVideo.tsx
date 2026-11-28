@@ -131,11 +131,13 @@ export function StoryVideo() {
               <div className="mx-auto w-[min(100%,520px,calc((100svh-370px)*1.63))]" style={{ transform: 'translateX(calc(var(--t) * 30vw)) scale(calc(1 + var(--t) * 0.6))' }}>
                 <ServiceFlow onPick={goTo} compact dark />
               </div>
-              <h1 className="mt-5 text-[1.7rem] font-bold leading-[1.08] tracking-tight text-white">{intro.title}</h1>
-              <p className="mt-2 text-[0.92rem] leading-snug text-white/85">{about}</p>
-              <button type="button" onClick={() => goTo('finance')} className="btn-primary mt-4 !py-2.5">
-                Follow a season
-              </button>
+              <div data-flow-hide>
+                <h1 className="mt-5 text-[1.7rem] font-bold leading-[1.08] tracking-tight text-white">{intro.title}</h1>
+                <p className="mt-2 text-[0.92rem] leading-snug text-white/85">{about}</p>
+                <button type="button" onClick={() => goTo('finance')} className="btn-primary mt-4 !py-2.5">
+                  Follow a season
+                </button>
+              </div>
             </div>
           )}
           {!isOutro && (
@@ -202,7 +204,7 @@ function IntroStage({ onPick }: { onPick: (scene: string) => void }) {
           <ServiceFlow onPick={onPick} />
         </div>
       </div>
-      <div className="w-[min(360px,25vw)]" style={{ opacity: 'calc(1 - var(--t) * 2.4)', transform: 'translateX(calc(var(--t) * -3vw))' }}>
+      <div data-flow-hide className="w-[min(360px,25vw)]" style={{ opacity: 'calc(1 - var(--t) * 2.4)', transform: 'translateX(calc(var(--t) * -3vw))' }}>
         <div className="lower-third">
           <p className="text-[0.95rem] font-bold text-field">What iFarmer does</p>
           <h1 className="mt-1 text-[clamp(1.8rem,2.7vw,2.7rem)] font-bold leading-[1.04] tracking-[-0.03em] text-ink">{intro.title}</h1>

@@ -93,7 +93,6 @@ export type Station = {
   scene: string; // the part of the scroll story it belongs to
   x: number; // plane position
   y: number;
-  lane: [number, number]; // where its lane meets the main road
   flow: 'in' | 'out'; // value travels to the farmer, or from the farmer
   token: string;
   tall: number; // height of its model, for placing the label
@@ -114,9 +113,8 @@ export const stations: Station[] = [
     via: 'Folon, iHarvst',
     detail: 'Collateral-free loans, applied for on Folon and backed by funders on iHarvst and partner banks, repaid at harvest.',
     scene: 'finance',
-    x: -300,
-    y: -80,
-    lane: [-300, 0],
+    x: -235,
+    y: -86,
     flow: 'in',
     token: '#F2C14E',
     explore: { label: "Explore Access to Finance", href: "/access-to-finance/" },
@@ -125,22 +123,31 @@ export const stations: Station[] = [
       { app: "iHarvst", screen: "iharvst-fund", text: "Funders and partner banks choose a farm to back." },
       { app: "Folon", screen: "folon-approved", text: "Approved and paid out, with no collateral." },
     ],
-    tall: 50,
+    tall: 58,
     draw: (o) => (
       <>
-        <Box o={o} x={2} y={-20} z={0} w={22} d={13} h={2.5} top="#A9D86A" left="#7FB33F" right="#6A9A31" />
-        <ellipse cx={at(o, 13, -13.5, 2.5)[0]} cy={at(o, 13, -13.5, 2.5)[1]} rx="4" ry="2.3" fill="#7FB33F" />
-        {[0, 1, 2, 3].map((k) => (
-          <Cyl key={k} o={o} x={-8} y={-2} z={k * 4} r={11} h={3.6} top="#F7D46A" side="url(#fl-coin)" rim="#E2AE36" />
+        <Box o={o} x={-26} y={-20} z={0} w={52} d={42} h={4} top="#F4F2EA" left="#E6E1D3" right="#CFC8B7" />
+        <Box o={o} x={-21} y={-16} z={4} w={42} d={30} h={21} top="#FFFDF5" left="#F6F1E4" right="#E0D7C2" />
+        <g transform={faceL(at(o, -21, 14, 4))}>
+          <rect x="17" y="0" width="8" height="13" rx="1" fill={TEAL} />
+          <rect x="3" y="7" width="6" height="8" rx="1" fill="#BFE7F2" />
+          <rect x="33" y="7" width="6" height="8" rx="1" fill="#BFE7F2" />
+        </g>
+        {[-16, -6, 4, 14].map((x) => (
+          <Cyl key={x} o={o} x={x} y={18} z={4} r={2.3} h={21} top="#FFFFFF" side="url(#fl-pole)" />
         ))}
-        {[0, 1].map((k) => (
-          <Cyl key={k} o={o} x={12} y={10} z={k * 4} r={9} h={3.6} top="#F7D46A" side="url(#fl-coin)" rim="#E2AE36" />
-        ))}
-        <g transform={`translate(${at(o, -8, -2, 34).join(' ')})`}>
+        <Box o={o} x={-24} y={-19} z={25} w={48} d={40} h={4} top="#4FB25F" left="#2E9A3E" right="#1F7F31" />
+        <polygon points={poly([[o.x, o.y - 19, o.z + 41], [o.x, o.y + 21, o.z + 41], [o.x + 24, o.y + 21, o.z + 29], [o.x + 24, o.y - 19, o.z + 29]])} fill="#1F7F31" />
+        <polygon points={poly([[o.x - 24, o.y + 21, o.z + 29], [o.x + 24, o.y + 21, o.z + 29], [o.x, o.y + 21, o.z + 41]])} fill="#FFF8E8" stroke="#2E9A3E" strokeWidth="1" strokeLinejoin="round" />
+        <g transform={`translate(${at(o, 0, 21, 33.5).join(' ')})`}>
+          <circle r="4.6" fill="#F7D46A" stroke="#E2AE36" strokeWidth="1" />
+          <text y="2.6" textAnchor="middle" fontSize="7" fontWeight="800" fill="#B07F12">৳</text>
+        </g>
+        <g transform={`translate(${at(o, 14, -8, 56).join(' ')})`}>
           <g>
             {bob(4, 3.2)}
-            <ellipse rx="9.5" ry="10" fill="#F7D46A" stroke="#E2AE36" strokeWidth="1.4" />
-            <text y="4.2" textAnchor="middle" fontSize="12" fontWeight="800" fill="#B07F12">৳</text>
+            <ellipse rx="8.5" ry="9" fill="#F7D46A" stroke="#E2AE36" strokeWidth="1.3" />
+            <text y="3.8" textAnchor="middle" fontSize="11" fontWeight="800" fill="#B07F12">৳</text>
           </g>
         </g>
       </>
@@ -152,9 +159,8 @@ export const stations: Station[] = [
     via: 'KriShop, Farmer Card',
     detail: 'Village retailers order quality seed, fertilizer and crop protection on KriShop; farmers pay later with the Farmer Card.',
     scene: 'inputs',
-    x: -70,
-    y: -250,
-    lane: [0, -250],
+    x: -109,
+    y: -269,
     flow: 'in',
     token: '#88BB41',
     explore: { label: "Explore Agri Input & Machinery", href: "/agri-input/" },
@@ -164,19 +170,38 @@ export const stations: Station[] = [
       { app: "Farmer Card", screen: "farmer-card", text: "The farmer buys now and pays in 30 to 90 days." },
       { app: "Machinery", screen: "machine-catalog", text: "Machines to finance, tried first at an Experience Center." },
     ],
-    tall: 42,
+    tall: 40,
     draw: (o) => (
       <>
-        <Slab o={o} x={-20} y={-14} z={0} w={17} d={24} h={22} rx={6} top="#F3E8CF" side="url(#fl-sack)" />
-        <Slab o={o} x={1} y={-14} z={0} w={17} d={24} h={22} rx={6} top="#F3E8CF" side="url(#fl-sack)" />
-        <Slab o={o} x={-10} y={-12} z={22} w={17} d={20} h={16} rx={6} top="#F3E8CF" side="url(#fl-sack)" />
-        {[[-11.5, 10, 6], [9.5, 10, 6], [-1.5, 8, 25]].map(([x, y, z], k) => (
-          <g key={k} transform={faceL(at(o, x, y, z))}>
-            <rect x="-4.5" y="2" width="9" height="9" rx="2.5" fill={GREEN} />
-            <path d="M -2 4.5 C -2 8.5 2 9 2.5 9.5 C 2.5 6 0.5 4 -2 4.5 Z" fill={LIME} />
-          </g>
+        {/* the warehouse */}
+        <Box o={o} x={-31} y={-25} z={0} w={33} d={35} h={20} top="#F1F4EE" left="#E4EAE0" right="#C8D2C2" />
+        <polygon points={poly([[o.x + 2, o.y - 25, o.z + 20], [o.x + 2, o.y + 10, o.z + 20], [o.x + 2, o.y - 7.5, o.z + 31]])} fill="#DCE3D7" />
+        <g transform={faceL(at(o, -31, 10, 0))}>
+          <rect x="9" y="0" width="16" height="15" fill="#9AA79B" />
+          {[2.5, 5, 7.5, 10, 12.5].map((v) => (
+            <path key={v} d={`M 9 ${v} h 16`} stroke="#7F8C80" strokeWidth="0.8" />
+          ))}
+        </g>
+        <polygon points={poly([[o.x - 32, o.y + 11, o.z + 20], [o.x + 3, o.y + 11, o.z + 20], [o.x + 3, o.y - 7.5, o.z + 31], [o.x - 32, o.y - 7.5, o.z + 31]])} fill="#6FA02C" />
+        {[-28, -23, -18, -13, -8, -3, 2].map((x) => (
+          <polyline key={x} points={poly([[o.x + x, o.y + 11, o.z + 20], [o.x + x, o.y - 7.5, o.z + 31]])} fill="none" stroke="#5E852B" strokeWidth="0.9" />
         ))}
-        <Box o={o} x={20} y={8} z={0} w={10} d={10} h={9} top="#B8DB8A" left="#8FBF55" right="#77A644" />
+        <Slab o={o} x={-10} y={13} z={0} w={8} d={9} h={9} rx={3} top="#F3E8CF" side="url(#fl-sack)" />
+        {/* the village store (KriShop) */}
+        <Box o={o} x={7} y={4} z={0} w={20} d={18} h={14} top="#FFF8E8" left="#FFF3DA" right="#E8DCC0" />
+        <g transform={faceL(at(o, 7, 22, 0))}>
+          <rect x="7" y="0" width="6" height="9" rx="0.8" fill={TEAL} />
+          <rect x="1.5" y="4" width="4.5" height="5" rx="0.8" fill="#BFE7F2" />
+          <rect x="14" y="4" width="4.5" height="5" rx="0.8" fill="#BFE7F2" />
+          {[0, 1, 2, 3, 4].map((k) => (
+            <rect key={k} x={k * 4} y="10.5" width="4" height="3.5" fill={k % 2 ? '#FFFFFF' : LIME} />
+          ))}
+        </g>
+        <Box o={o} x={6} y={3} z={14} w={22} d={20} h={2.5} top="#4FB25F" left="#2E9A3E" right="#1F7F31" />
+        <g transform={`translate(${at(o, 17, 13, 17).join(' ')})`}>
+          <rect x="-9" y="-10" width="18" height="10" rx="3" fill="#FFFFFF" stroke="#D7E3D2" />
+          <path d="M -3 -2.5 C -3 -7.5 1.5 -8.2 3.5 -8.2 C 3.5 -4 0.8 -2.5 -3 -2.5 Z" fill={GREEN} />
+        </g>
       </>
     ),
   },
@@ -186,9 +211,8 @@ export const stations: Station[] = [
     via: 'Folon-AI',
     detail: 'Folon-AI answers in Bangla by text, voice or photo, and agronomists take the hard cases.',
     scene: 'grow',
-    x: 90,
-    y: -190,
-    lane: [0, -190],
+    x: 71,
+    y: -176,
     flow: 'in',
     token: '#B8E655',
     explore: { label: "Explore Advisory & Insurance", href: "/agri-advisory/" },
@@ -228,9 +252,8 @@ export const stations: Station[] = [
     via: 'Sensors, insurers',
     detail: 'Soil sensors and satellite monitoring protect the crop, and insurance covers crop, cattle and family.',
     scene: 'grow',
-    x: 230,
-    y: -70,
-    lane: [230, 0],
+    x: 245,
+    y: -114,
     flow: 'in',
     token: '#7CC6E8',
     explore: { label: "Explore Advisory & Insurance", href: "/agri-advisory/" },
@@ -274,9 +297,8 @@ export const stations: Station[] = [
     via: 'Supplier Connect',
     detail: 'Traders share crop availability and prices on Supplier Connect; we match them with institutional and export buyers.',
     scene: 'market',
-    x: 300,
-    y: 100,
-    lane: [300, 0],
+    x: 260,
+    y: 105,
     flow: 'out',
     token: '#E9792F',
     explore: { label: "Explore Market Linkage", href: "/forward-market-linkage/" },
@@ -285,28 +307,37 @@ export const stations: Station[] = [
       { app: "Supplier Connect", screen: "supplier-orders", text: "Institutional and export buyers place orders with clear standards." },
       { app: "Supplier Connect", screen: "supplier-dispatch", text: "Quality checked at every hand-off, then dispatched." },
     ],
-    tall: 36,
-    draw: (o) => (
-      <>
-        <Box o={o} x={-24} y={-10} z={3} w={30} d={20} h={22} top="#FFFFFF" left="#EEF3EA" right="#D3DECF" />
-        <g transform={faceL(at(o, -24, 10, 3))}>
-          <rect x="3" y="9" width="24" height="5" rx="1.5" fill={LEAF} />
-          <path d="M 4 17 h 22" stroke={GREEN} strokeWidth="1.2" />
+    tall: 32,
+    draw: (o) => {
+      const stall = (x: number, y: number, a: string, b: string, goods: string[]) => (
+        <g>
+          <Box o={o} x={x} y={y} z={0} w={16} d={11} h={7} top="#E2C08A" left="#D3AE73" right="#B89257" />
+          {goods.map((c, k) => {
+            const [cx, cy] = at(o, x + 3.5 + k * 4.5, y + 4 + (k % 2) * 3, 8.5);
+            return <circle key={k} cx={cx} cy={cy} r="2.4" fill={c} stroke="#00000018" strokeWidth="0.5" />;
+          })}
+          <polyline points={poly([[o.x + x, o.y + y + 11, o.z + 7], [o.x + x, o.y + y + 11, o.z + 20]])} stroke="#8C6A45" strokeWidth="1.1" fill="none" />
+          <polyline points={poly([[o.x + x + 16, o.y + y + 11, o.z + 7], [o.x + x + 16, o.y + y + 11, o.z + 20]])} stroke="#8C6A45" strokeWidth="1.1" fill="none" />
+          {[0, 1, 2, 3].map((k) => (
+            <polygon
+              key={k}
+              points={poly([[o.x + x - 1 + k * 4.5, o.y + y - 1, o.z + 24], [o.x + x + 3.5 + k * 4.5, o.y + y - 1, o.z + 24], [o.x + x + 3.5 + k * 4.5, o.y + y + 13, o.z + 20], [o.x + x - 1 + k * 4.5, o.y + y + 13, o.z + 20]])}
+              fill={k % 2 ? b : a}
+            />
+          ))}
         </g>
-        <Box o={o} x={6} y={-9} z={3} w={14} d={18} h={16} top="#4FB25F" left="#2E9A3E" right="#1F7F31" />
-        <g transform={faceR(at(o, 20, 9, 3))}>
-          <rect x="3" y="7" width="12" height="7" rx="1.5" fill="#BFE7F2" opacity="0.9" />
-        </g>
-        {[-15, 12].map((x) => (
-          <g key={x} transform={faceL(at(o, x, 10.5, 0))}>
-            <circle cx="0" cy="4.5" r="4.6" fill="#22313A" />
-            <circle cx="0" cy="4.5" r="1.8" fill="#9AA7AE" />
-          </g>
-        ))}
-        <Box o={o} x={-30} y={14} z={0} w={9} d={9} h={8} top="#C9E59E" left="#9FCB63" right="#86B24E" />
-        <Box o={o} x={-30} y={14} z={8} w={9} d={9} h={7} top="#F7D46A" left="#EDC04D" right="#D3A538" />
-      </>
-    ),
+      );
+      return (
+        <>
+          {stall(-30, -22, '#F2A93B', '#FFF4DC', ['#E9792F', '#88BB41', '#E9792F'])}
+          {stall(-8, -28, '#4FB25F', '#F3FBE6', ['#A3D45B', '#F2C14E', '#88BB41'])}
+          {stall(6, -4, '#E85D4A', '#FFEFE8', ['#F2A93B', '#6FAE2E', '#E9792F'])}
+          <Box o={o} x={-22} y={12} z={0} w={9} d={9} h={8} top="#C9E59E" left="#9FCB63" right="#86B24E" />
+          <Box o={o} x={-22} y={12} z={8} w={9} d={9} h={7} top="#F7D46A" left="#EDC04D" right="#D3A538" />
+          <Box o={o} x={-11} y={16} z={0} w={9} d={9} h={8} top="#F2B47A" left="#E39A5A" right="#C9803F" />
+        </>
+      );
+    },
   },
   {
     id: 'center',
@@ -314,9 +345,8 @@ export const stations: Station[] = [
     via: `${metrics.centers.value} centers`,
     detail: 'One door in the village: farmers walk in to apply for a loan, buy inputs, get advice and sell their harvest.',
     scene: 'center',
-    x: 70,
-    y: 250,
-    lane: [0, 250],
+    x: 52,
+    y: 193,
     flow: 'in',
     token: '#88BB41',
     explore: { label: "About iFarmer Centers", href: "/ifarmer-center/" },
@@ -352,9 +382,8 @@ export const stations: Station[] = [
     via: 'Loan settled',
     detail: 'Sale proceeds reach the farmer, the loan is settled from the harvest and funders are repaid.',
     scene: 'paid',
-    x: -60,
-    y: 210,
-    lane: [0, 210],
+    x: -143,
+    y: 229,
     flow: 'in',
     token: '#F2C14E',
     explore: { label: "Explore iHarvst", href: "/product-iharvst/" },
@@ -398,9 +427,8 @@ export const stations: Station[] = [
     via: 'Stronger record',
     detail: 'Every repaid season strengthens the farmer’s record, and the next season begins.',
     scene: 'outro',
-    x: -230,
-    y: 60,
-    lane: [-230, 0],
+    x: -169,
+    y: 62,
     flow: 'out',
     token: '#B8E655',
     explore: { label: "See our impact", href: "/impact/" },
@@ -461,83 +489,63 @@ const SKIN_DARK = '#6F452C';
 const HAIR = '#1B1410';
 
 /**
- * A Bangladeshi farmer, standing at (0, 0) with his feet there: mathal (palm-leaf hat), gamchha
- * over the shoulder, fatua and a checked lungi; a sheaf of paddy in one hand and his phone in the
- * other.
+ * A Bangladeshi farmer, standing at (0, 0): a gamchha tied round his head and another round his
+ * neck, a fatua and a checked lungi folded to the knee. He waves with one hand and holds his phone
+ * in the other. About 70 units tall.
  */
 export function Farmer() {
   return (
     <g>
-      <ellipse cx="0" cy="1" rx="17" ry="5" fill="rgba(2,43,54,0.2)" />
-      <defs>
-        <clipPath id="fl-lungi">
-          <path d="M -12 -38 H 12 L 13.5 -8 Q 0 -6 -13.5 -8 Z" />
-        </clipPath>
-      </defs>
+      <ellipse cx="0" cy="0.5" rx="13" ry="4" fill="rgba(2,43,54,0.22)" />
       {/* legs and bare feet */}
-      <path d="M -5.5 -10 L -6.2 -2 M 5 -10 L 5.6 -2" stroke={SKIN} strokeWidth="4.4" strokeLinecap="round" />
-      <ellipse cx="-7.4" cy="-0.9" rx="4.2" ry="1.9" fill={SKIN_DARK} />
-      <ellipse cx="6.9" cy="-0.9" rx="4.2" ry="1.9" fill={SKIN_DARK} />
-      {/* paddy sheaf, held low in his right hand */}
-      <g stroke="#C9952E" strokeWidth="1.1" strokeLinecap="round">
-        {[-31, -28, -25, -22, -19.5].map((tx, k) => (
-          <path key={k} d={`M -17 -27 Q ${tx + 3} -48 ${tx} ${-66 + (k % 2) * 4}`} fill="none" />
+      <rect x="-5.4" y="-13" width="4" height="12" rx="2" fill={SKIN} />
+      <rect x="1.4" y="-13" width="4" height="12" rx="2" fill={SKIN} />
+      <ellipse cx="-4" cy="-0.9" rx="3.5" ry="1.6" fill={SKIN_DARK} />
+      <ellipse cx="4" cy="-0.9" rx="3.5" ry="1.6" fill={SKIN_DARK} />
+      {/* lungi */}
+      <path d="M -9 -31 H 9 L 10 -12 Q 0 -10 -10 -12 Z" fill="#2C5D8A" />
+      <g strokeWidth="0.9" stroke="#4A7FB0">
+        {[-6, -1.5, 3, 7.5].map((x) => (
+          <path key={x} d={`M ${x} -30 V -11.6`} />
+        ))}
+        {[-25, -19, -13.5].map((y) => (
+          <path key={y} d={`M -9.2 ${y} H 9.2`} />
         ))}
       </g>
-      {[-31, -28, -25, -22, -19.5].map((tx, k) => (
-        <g key={k} fill="#E3B54A">
-          <ellipse cx={tx} cy={-66 + (k % 2) * 4} rx="1.5" ry="3.4" transform={`rotate(-18 ${tx} ${-66 + (k % 2) * 4})`} />
-          <ellipse cx={tx + 0.8} cy={-60 + (k % 2) * 4} rx="1.3" ry="2.6" transform={`rotate(-14 ${tx + 0.8} ${-60 + (k % 2) * 4})`} />
-        </g>
-      ))}
-      <path d="M -21 -36 L -16 -35" stroke="#8C6A2A" strokeWidth="2.4" strokeLinecap="round" />
-      {/* lungi, checked */}
-      <path d="M -12 -38 H 12 L 13.5 -8 Q 0 -6 -13.5 -8 Z" fill="#1F6B4A" />
-      <g clipPath="url(#fl-lungi)" strokeWidth="1">
-        {[-9, -4, 1, 6, 11].map((x) => (
-          <path key={x} d={`M ${x} -40 V -4`} stroke="#3E8F69" />
-        ))}
-        {[-31, -24, -17, -10].map((y) => (
-          <path key={y} d={`M -15 ${y} H 15`} stroke="#3E8F69" />
-        ))}
-        {[-6.5, 3.5].map((x) => (
-          <path key={x} d={`M ${x} -40 V -4`} stroke="#E8F0E6" strokeWidth="0.5" />
-        ))}
-      </g>
-      <rect x="-12.5" y="-40" width="25" height="3.2" rx="1.4" fill="#17573B" />
+      <rect x="-9.6" y="-32.6" width="19.2" height="3" rx="1.5" fill="#244E75" />
       {/* fatua */}
-      <path d="M -9 -64 Q 0 -61 9 -64 L 16 -60 L 17.5 -50 L 12.8 -48.6 L 13 -37 Q 0 -35 -13 -37 L -12.8 -48.6 L -17.5 -50 L -16 -60 Z" fill="#F3EEDD" stroke="#DED5BC" strokeWidth="0.8" />
-      <path d="M 0 -61 V -42" stroke="#DED5BC" strokeWidth="0.8" />
-      {/* right arm, down, holding the sheaf */}
-      <path d="M -15.2 -49.5 Q -17.6 -41 -17 -33" stroke={SKIN} strokeWidth="5" strokeLinecap="round" fill="none" />
-      <circle cx="-17" cy="-31.5" r="3" fill={SKIN} />
-      {/* gamchha over the shoulder */}
-      <path d="M -8.5 -63.5 Q 0 -57 8.5 -63.5 L 10.5 -61 Q 0 -53.5 -10.5 -61 Z" fill="#D8493B" />
-      <path d="M 6.5 -61.5 L 11.5 -61 L 10.6 -44.5 L 5.6 -45.5 Z" fill="#D8493B" />
-      <path d="M 6.2 -57 L 11.2 -56.6 M 6 -52 L 11 -51.6 M 5.8 -48 L 10.8 -47.6" stroke="#FFFFFF" strokeWidth="0.7" />
-      <path d="M -6 -60 Q 0 -57 6 -60" stroke="#FFFFFF" strokeWidth="0.6" fill="none" />
-      {/* left arm, bent, with his phone */}
-      <path d="M 15.4 -49.5 L 16.6 -42 L 9 -44.6" stroke={SKIN} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <rect x="3.6" y="-54" width="7.4" height="11.4" rx="1.6" fill="#0E1512" />
-      <rect x="4.6" y="-52.8" width="5.4" height="8.4" rx="0.9" fill={LIME}>
-        <animate attributeName="opacity" values="0.75;1;0.75" dur="2.4s" repeatCount="indefinite" />
+      <path d="M -8 -50 Q 0 -47.5 8 -50 L 12.8 -46.5 L 13.4 -39 L 9.6 -38.4 L 9.8 -30.5 Q 0 -29 -9.8 -30.5 L -9.6 -38.4 L -13.4 -39 L -12.8 -46.5 Z" fill="#F3EEDD" stroke="#DED5BC" strokeWidth="0.7" />
+      <path d="M 0 -48 V -36" stroke="#DED5BC" strokeWidth="0.7" />
+      {/* gamchha round the neck */}
+      <path d="M -7.2 -49.6 Q 0 -44.2 7.2 -49.6 L 8.6 -47.4 Q 0 -41.6 -8.6 -47.4 Z" fill="#D8493B" />
+      <path d="M -4.5 -46.7 L -4 -44.6 M 0 -45.6 V -43.4 M 4.5 -46.7 L 4 -44.6" stroke="#FFFFFF" strokeWidth="0.6" />
+      {/* waving arm */}
+      <path d="M -12.4 -45 L -17 -50.5" stroke={SKIN} strokeWidth="4" strokeLinecap="round" />
+      <g>
+        <animateTransform attributeName="transform" type="rotate" values="-12 -17 -50.5; 14 -17 -50.5; -12 -17 -50.5" dur="1.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1; 0.45 0 0.55 1" />
+        <path d="M -17 -50.5 L -16 -59.5" stroke={SKIN} strokeWidth="4" strokeLinecap="round" />
+        <circle cx="-15.8" cy="-61" r="2.7" fill={SKIN} />
+      </g>
+      {/* the other arm, with his phone */}
+      <path d="M 12.4 -45 L 13.4 -37.6 L 7.6 -39.6" stroke={SKIN} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <rect x="3.3" y="-47" width="6.2" height="9.6" rx="1.3" fill="#0E1512" />
+      <rect x="4.1" y="-46" width="4.6" height="7.2" rx="0.8" fill={LIME}>
+        <animate attributeName="opacity" values="0.7;1;0.7" dur="2.4s" repeatCount="indefinite" />
       </rect>
-      <circle cx="8.2" cy="-44.2" r="2.7" fill={SKIN} />
-      {/* head */}
-      <rect x="-3" y="-67.5" width="6" height="5.5" fill={SKIN_DARK} />
-      <ellipse cx="-8" cy="-73.5" rx="1.7" ry="2.5" fill={SKIN_DARK} />
-      <ellipse cx="8" cy="-73.5" rx="1.7" ry="2.5" fill={SKIN_DARK} />
-      <ellipse cx="0" cy="-74" rx="8" ry="9.6" fill={SKIN} />
-      <path d="M -8 -75 Q -8.4 -84 0 -84.2 Q 8.4 -84 8 -75 Q 6 -79.2 0 -79.6 Q -6 -79.2 -8 -75 Z" fill={HAIR} />
-      <circle cx="-3" cy="-74.6" r="0.95" fill={HAIR} />
-      <circle cx="3" cy="-74.6" r="0.95" fill={HAIR} />
-      <path d="M -3.8 -70 Q 0 -72 3.8 -70 Q 0 -70.6 -3.8 -70 Z" fill={HAIR} stroke={HAIR} strokeWidth="0.8" strokeLinejoin="round" />
-      <path d="M -2.2 -67.9 Q 0 -66.6 2.2 -67.9" stroke="#5A3523" strokeWidth="0.75" fill="none" strokeLinecap="round" />
-      {/* mathal */}
-      <ellipse cx="0" cy="-81.5" rx="24.5" ry="7.2" fill="#DDBB7A" stroke="#B8914F" strokeWidth="0.8" />
-      <ellipse cx="0" cy="-81.8" rx="17" ry="4.8" fill="none" stroke="#C9A262" strokeWidth="0.6" />
-      <path d="M -11.5 -82.5 Q 0 -95 11.5 -82.5 Q 0 -79.5 -11.5 -82.5 Z" fill="#E7C98C" stroke="#B8914F" strokeWidth="0.8" />
-      <path d="M -6 -84.5 Q 0 -91 6 -84.5" fill="none" stroke="#C9A262" strokeWidth="0.6" />
+      <circle cx="6.9" cy="-38.7" r="2.3" fill={SKIN} />
+      {/* head, with a gamchha tied round it */}
+      <rect x="-2.4" y="-53.5" width="4.8" height="4.5" fill={SKIN_DARK} />
+      <circle cx="-8.5" cy="-59.6" r="1.7" fill={SKIN_DARK} />
+      <circle cx="8.5" cy="-59.6" r="1.7" fill={SKIN_DARK} />
+      <circle cx="0" cy="-60" r="8.6" fill={SKIN} />
+      <path d="M -8.6 -61.5 Q -8.4 -69.8 0 -70 Q 8.4 -69.8 8.6 -61.5 Q 6 -65.6 0 -65.8 Q -6 -65.6 -8.6 -61.5 Z" fill={HAIR} />
+      <path d="M -9 -64 Q 0 -68.2 9 -64 L 8.8 -61 Q 0 -65 -8.8 -61 Z" fill="#D8493B" />
+      <path d="M -5 -65.6 L -5 -62.8 M 0 -66.6 V -63.8 M 5 -65.6 L 5 -62.8" stroke="#FFFFFF" strokeWidth="0.6" />
+      <path d="M 8.6 -63 q 4 -1 5.6 2.4 q -3.2 -0.2 -5.2 0.6 z" fill="#C23D30" />
+      <circle cx="-3" cy="-59.4" r="1" fill={HAIR} />
+      <circle cx="3" cy="-59.4" r="1" fill={HAIR} />
+      <path d="M -3.4 -55.6 Q 0 -57.3 3.4 -55.6 Q 0 -56.2 -3.4 -55.6 Z" fill={HAIR} stroke={HAIR} strokeWidth="0.8" strokeLinejoin="round" />
+      <path d="M -2.1 -53.9 Q 0 -52.7 2.1 -53.9" stroke="#5A3523" strokeWidth="0.7" fill="none" strokeLinecap="round" />
     </g>
   );
 }
