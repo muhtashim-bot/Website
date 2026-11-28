@@ -2,6 +2,17 @@
 
 A full rebuild of ifarmer.asia. The homepage is a realistic 3D fly-through of a Bangladeshi delta that follows one farming season: a farmer applies for finance, funders back the loan, inputs arrive, the crop grows and ripens, the harvest is sold, and everyone is paid. The app journey (every service, the apps that deliver it, and a phone whose screen changes) sits on the left. 35 pages on shared templates. It keeps the current brand (leaf green `#88BB41`, deep green `#038F2F`, lime `#DDFF80`, cream `#FFF5D9`, Quicksand) and folds in the AI & Data Website Update Guide (Nov 2026).
 
+## Versions
+
+Each version lives on its own branch and has its own Vercel site:
+
+| Branch | Live link | What is different |
+| --- | --- | --- |
+| `main` | ifarmer-asia | Same as `video` |
+| `video` | ifarmer-video.vercel.app | Homepage opens on the round service wheel, then a scroll story over real footage |
+| `flow` | ifarmer-flow.vercel.app | Same as `video`, but the wheel is replaced by an isometric loop of service stations with value flowing through glass pipes (`src/components/ServiceFlow.tsx`) |
+| `animation` | ifarmer-animation.vercel.app | Earlier 3D-rendered homepage |
+
 ## Run it locally
 
 You need **Node.js 18.18 or newer** (20 LTS recommended).
