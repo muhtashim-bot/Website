@@ -86,6 +86,24 @@
 .flow-obj { transition: transform 0.35s cubic-bezier(0.3, 0.7, 0.3, 1); }
 @keyframes flowCard { from { opacity: 0; } to { opacity: 1; } }
 .flow-card { animation: flowCard 0.25s ease-out both; }
+/* the station card zooms out of the station it belongs to, and back into it on close */
+@keyframes flowZoomIn {
+  from { transform: translate(var(--zx), var(--zy)) scale(0.08); opacity: 0; }
+  35% { opacity: 1; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes flowZoomOut {
+  from { transform: none; opacity: 1; }
+  to { transform: translate(var(--zx), var(--zy)) scale(0.08); opacity: 0; }
+}
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+.flow-zoom-in { animation: flowZoomIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.flow-zoom-out { animation: flowZoomOut 0.28s cubic-bezier(0.5, 0, 0.75, 0) both; }
+.flow-fade-in { animation: fadeIn 0.4s ease-out both; }
+.flow-fade-out { animation: fadeOut 0.28s ease-in both; }
+@media (prefers-reduced-motion: reduce) {
+  .flow-zoom-in, .flow-zoom-out, .flow-fade-in, .flow-fade-out { animation-duration: 0.01ms; }
+}
 .flow-station:focus-visible > rect:last-child { stroke: #038F2F; stroke-width: 2; stroke-dasharray: 4 3; }
 /* the wheel's resonance: a ring born at the centre that widens and fades out */
 @keyframes wheelRipple {

@@ -84,7 +84,7 @@ export function StoryVideo() {
 
         {/* light from the left and the top: the story and the navigation sit on it */}
         <div aria-hidden className="pointer-events-none absolute inset-0 z-[6] hidden bg-[linear-gradient(90deg,rgba(255,253,245,0.97)_0%,rgba(255,253,245,0.95)_40%,rgba(255,253,245,0.88)_52%,rgba(255,253,245,0.7)_62%,rgba(255,253,245,0.4)_70%,rgba(255,253,245,0.12)_78%,rgba(255,253,245,0)_86%)] lg:block" />
-        <div aria-hidden className="pointer-events-none absolute inset-0 z-[6] hidden bg-[linear-gradient(90deg,rgba(255,253,245,0)_55%,rgba(255,253,245,0.55)_66%,rgba(255,253,245,0.25)_76%,rgba(255,253,245,0)_86%)] lg:block" style={{ opacity: 'calc(1 - var(--t) * 2.5)' }} />
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-[6] hidden bg-[linear-gradient(90deg,rgba(255,253,245,0)_50%,rgba(255,253,245,0.6)_60%,rgba(255,253,245,0.84)_68%,rgba(255,253,245,0.84)_86%,rgba(255,253,245,0.4)_94%,rgba(255,253,245,0)_100%)] lg:block" style={{ opacity: 'calc(1 - var(--t) * 2.5)' }} />
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[6] h-[20%] bg-gradient-to-b from-[rgba(255,253,245,0.9)] via-[rgba(255,253,245,0.45)] to-transparent" />
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[6] h-[64%] bg-gradient-to-t from-[rgba(2,30,36,0.94)] via-[rgba(2,30,36,0.55)] to-transparent lg:hidden" />
 
@@ -128,7 +128,7 @@ export function StoryVideo() {
         <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-7 text-white lg:hidden">
           {!isOutro && (
             <div className={`absolute inset-x-0 bottom-0 px-4 pb-7 ${beat === 0 ? '' : 'pointer-events-none'}`} style={{ opacity: 'calc(1 - var(--t) * 2)' }}>
-              <div className="mx-auto w-[min(100%,480px,calc((100svh-380px)*1.6))]" style={{ transform: 'translateX(calc(var(--t) * 30vw)) scale(calc(1 + var(--t) * 0.6))' }}>
+              <div className="mx-auto w-[min(100%,520px,calc((100svh-370px)*1.63))]" style={{ transform: 'translateX(calc(var(--t) * 30vw)) scale(calc(1 + var(--t) * 0.6))' }}>
                 <ServiceFlow onPick={goTo} compact dark />
               </div>
               <h1 className="mt-5 text-[1.7rem] font-bold leading-[1.08] tracking-tight text-white">{intro.title}</h1>
@@ -195,7 +195,7 @@ function IntroStage({ onPick }: { onPick: (scene: string) => void }) {
   return (
     <div className="relative -ml-[clamp(0rem,1.5vw,2rem)] flex h-[min(calc(100svh-var(--header-h)-24px),720px)] items-center gap-[clamp(1.5rem,2.8vw,3rem)]">
       <div
-        className="w-[min(calc((100svh-var(--header-h)-40px)*1.55),49vw,820px)] shrink-0"
+        className="w-[min(calc((100svh-var(--header-h)-70px)*1.63),57vw,940px)] shrink-0"
         style={{ transform: 'translateX(calc(var(--t) * 36vw)) scale(calc(1 + var(--t) * 0.9))', opacity: 'calc(1 - var(--t) * 1.7)' }}
       >
         <div className="lower-third">
