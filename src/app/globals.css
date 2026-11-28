@@ -82,6 +82,11 @@
   to { opacity: 1; }
 }
 .wheel-stop { animation: fadeIn 0.35s ease-out both; animation-delay: calc(0.15s + var(--k) * 50ms); }
+/* flow version: station lift and the hover card */
+.flow-obj { transition: transform 0.35s cubic-bezier(0.3, 0.7, 0.3, 1); }
+@keyframes flowCard { from { opacity: 0; } to { opacity: 1; } }
+.flow-card { animation: flowCard 0.25s ease-out both; }
+.flow-station:focus-visible > rect:last-child { stroke: #038F2F; stroke-width: 2; stroke-dasharray: 4 3; }
 /* the wheel's resonance: a ring born at the centre that widens and fades out */
 @keyframes wheelRipple {
   0% { transform: scale(0.06); opacity: 0; }

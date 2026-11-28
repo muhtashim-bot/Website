@@ -15,7 +15,7 @@ import { metrics, headlineMetrics, METRICS_AS_OF } from '@/content/metrics';
 import { clips, sceneMedia, type Clip } from '@/content/storyVideo';
 import { Channels } from './Journey';
 import { Phone } from './PhoneScreens';
-import { ServiceWheel } from './ServiceWheel';
+import { ServiceFlow } from './ServiceFlow';
 
 const N = beats.length;
 const BEAT_VH = 40;
@@ -128,13 +128,8 @@ export function StoryVideo() {
         <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-7 text-white lg:hidden">
           {!isOutro && (
             <div className={`absolute inset-x-0 bottom-0 px-4 pb-7 ${beat === 0 ? '' : 'pointer-events-none'}`} style={{ opacity: 'calc(1 - var(--t) * 2)' }}>
-              <div className="mx-auto w-[min(94vw,420px,calc(100svh-370px))]" style={{ transform: 'translateX(calc(var(--t) * 30vw)) scale(calc(1 + var(--t) * 0.6))' }}>
-                <ServiceWheel onPick={goTo} compact dark>
-                  <div className="flex aspect-square w-full flex-col items-center justify-center rounded-full bg-[rgba(2,30,36,0.55)] px-4">
-                    <span className="text-[1.05rem] font-bold leading-tight text-white">The farmer</span>
-                    <span className="mt-1 max-w-[8rem] text-[0.66rem] font-bold leading-snug text-lime">Every service, from financing to payout</span>
-                  </div>
-                </ServiceWheel>
+              <div className="mx-auto w-[min(100%,480px,calc((100svh-380px)*1.6))]" style={{ transform: 'translateX(calc(var(--t) * 30vw)) scale(calc(1 + var(--t) * 0.6))' }}>
+                <ServiceFlow onPick={goTo} compact dark />
               </div>
               <h1 className="mt-5 text-[1.7rem] font-bold leading-[1.08] tracking-tight text-white">{intro.title}</h1>
               <p className="mt-2 text-[0.92rem] leading-snug text-white/85">{about}</p>
@@ -200,14 +195,11 @@ function IntroStage({ onPick }: { onPick: (scene: string) => void }) {
   return (
     <div className="relative -ml-[clamp(0rem,1.5vw,2rem)] flex h-[min(calc(100svh-var(--header-h)-24px),720px)] items-center gap-[clamp(1.5rem,2.8vw,3rem)]">
       <div
-        className="w-[min(calc((100svh-var(--header-h))*0.95),44vw,720px)] shrink-0"
+        className="w-[min(calc((100svh-var(--header-h)-40px)*1.55),49vw,820px)] shrink-0"
         style={{ transform: 'translateX(calc(var(--t) * 36vw)) scale(calc(1 + var(--t) * 0.9))', opacity: 'calc(1 - var(--t) * 1.7)' }}
       >
         <div className="lower-third">
-          <ServiceWheel onPick={onPick}>
-            <span className="text-[clamp(1.1rem,1.6vw,1.6rem)] font-bold leading-tight tracking-tight text-ink">The farmer</span>
-            <span className="mt-1.5 max-w-[12rem] text-[clamp(0.74rem,0.95vw,0.92rem)] font-bold leading-snug text-field">Every service, from financing to payout</span>
-          </ServiceWheel>
+          <ServiceFlow onPick={onPick} />
         </div>
       </div>
       <div className="w-[min(360px,25vw)]" style={{ opacity: 'calc(1 - var(--t) * 2.4)', transform: 'translateX(calc(var(--t) * -3vw))' }}>
